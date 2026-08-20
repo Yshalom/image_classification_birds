@@ -1,95 +1,36 @@
-# ==============================
-# Constant declaration
-# ==============================
-# Path to the test portion of the bird species image database (parquet file)
-DB_PATH = "database/birds-525-species-image-classification/data/test-00000-of-00001.parquet"
-# Path to the README that contains the label-to-species mapping (used if present)
-README_PATH = "database/birds-525-species-image-classification/README.md"
-# Path of the class label names in the README.md nested structure
-#   +------------------------+
-#   | dataset_info:          |
-#   |   features:            |
-#   |     name: label        |
-#   |       dtype:           |
-#   |         class_label:   |
-#   |           names:       |
-#   |             '0': $NAME |
-#   |             '1': $NAME |
-#   |             ...        |
-#   +------------------------+
-LABEL_NAME_PATH = ["dataset_info:", "features:", "name: label", "dtype:", "class_label:", "names:"]
+"""
+Image viewer module for the bird species image viewer.
+Contains the GUI application for viewing bird species images.
+"""
 
-# ==============================
-# Imports
-# ==============================
-import pandas as pd
-import matplotlib.pyplot as plt
-from PIL import Image, ImageTk
-import io
 import tkinter as tk
 from tkinter import ttk
+from PIL import Image, ImageTk
+import io
 
-# ==============================
-# Load dataset and build label name mapping
-# ==============================
-# Read the parquet file into a DataFrame
-df = pd.read_parquet(DB_PATH)
 
-def extract_label_names_from_readme(readme_path: str) -> list[str]:
-    """
-    Parse the README file using the exact nested structure described by LABEL_NAME_PATH:
-    """
-    # Read the whole file – return an empty list if we cannot read it.
-    with open(readme_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-
-    try:
-        for section_name in LABEL_NAME_PATH:
-            line_index = next(i for i, l in enumerate(lines) if section_name in l)
-            nested_level = lines[line_index].find(section_name)
-            lines = lines[line_index+1:] # trim boundary
-
-        # Here the `lines` are the lines which under LABEL_NAME_PATH in the README.md file:
-        
-        names_nested_level = next(i for i, c in enumerate(lines[0]) if c not in " \t")
-        assert nested_level < names_nested_level, "The README.md doesn't contain labels names"
-
-        # trim boundary
-        line_index = next(i for i, l in enumerate(lines) if 
-                          names_nested_level != next(j for j, c in enumerate(l) if c not in " \t"))
-        lines = lines[:line_index]
-
-        # extract class's names and id
-        class_ids = (int(l[names_nested_level+1:l.find(":")-1]) for l in lines)
-        class_names = (l[l.find(":") + 2:] for l in lines)
-
-        # place them into a list, where list[i] = class_name of class_id == i
-        d = dict(zip(class_ids, class_names))
-        return [d[i] for i in range(len(lines))]
-
-    except Exception as e:
-        raise "The README.md file structured is corrupted" from e
-
-# Build the global mapping of label number to label name
-# ------------------------------------------------------------------
-# Extract the raw (index, name) tuples
-LABEL_NAMES = extract_label_names_from_readme(README_PATH)
-
-# --------------------------------
-# GUI Application (Tkinter)
-# ==============================
-# A tiny GUI that shows images from the parquet file with navigation.
-# --------------------------------
 class ImageViewer(tk.Tk):
-    """A tiny GUI that shows images from the parquet file with navigation."""
+    """
+    A GUI application that shows images from the parquet file with navigation.
+    """
 
-    def __init__(self, df, indices, start_idx=0):
+    def __init__(self, df, indices, label_names, start_idx=0):
+        """
+        Initialize the ImageViewer.
+
+        Args:
+            df (pd.DataFrame): DataFrame containing the bird species data
+            indices (list): List of valid row indices to display
+            label_names (list): List of label names where index corresponds to class ID
+            start_idx (int): Starting index in the indices list
+        """
         super().__init__()
         self.title("Bird Species Image Viewer")
         self.resizable(False, False)
 
         self.df = df
         self.indices = list(indices)          # list of valid row indices
+        self.label_names = label_names        # list of label names
         self.current_idx = start_idx
 
         # Label that will hold the image
@@ -151,8 +92,13 @@ class ImageViewer(tk.Tk):
         self._display_image(self.current_idx)
 
     def _display_image(self, idx: int):
-        """Load the image at position idx, convert it for display, and update UI."""
-        row = self.df.iloc[idx]
+        """
+        Load the image at position idx, convert it for display, and update UI.
+
+        Args:
+            idx (int): Index in the indices list to display
+        """
+        row = self.df.iloc[self.indices[idx]]
         pil_img = Image.open(io.BytesIO(row["image"]["bytes"])).convert("RGB")
 
         # Resize for comfortable viewing while preserving aspect ratio
@@ -161,7 +107,6 @@ class ImageViewer(tk.Tk):
 
         self.photo = ImageTk.PhotoImage(pil_img)  # keep a reference!
         self.image_label.configure(image=self.photo)
-        plt.close('all')  # close any stray matplotlib windows
 
         # Update window title with the bird name (using the mapped species name)
         label_id = row["label"]
@@ -173,12 +118,17 @@ class ImageViewer(tk.Tk):
 
     def _get_species_name(self, label_id: int) -> str:
         """
-        Translate a numeric label to its species name using the tuple that is
-        indexed by the class number. If the index is out of range we fall back
-        to "UNKNOWN CLASS " + str(label_id)
+        Translate a numeric label to its species name using the label_names list.
+        If the index is out of range we fall back to "UNKNOWN CLASS " + str(label_id)
+
+        Args:
+            label_id (int): Numeric label ID
+
+        Returns:
+            str: Species name corresponding to the label ID
         """
         try:
-            return LABEL_NAMES[int(label_id)]
+            return self.label_names[int(label_id)]
         except IndexError:
             return "UNKNOWN CLASS " + str(label_id)
 
@@ -208,15 +158,11 @@ class ImageViewer(tk.Tk):
         self._advance(-100)
 
     def _advance(self, delta: int):
-        """Internal helper that moves the current index by `delta` and refreshes."""
+        """
+        Internal helper that moves the current index by `delta` and refreshes.
+
+        Args:
+            delta (int): Number of steps to advance (can be negative)
+        """
         self.current_idx = (self.current_idx + delta) % len(self.indices)
         self._display_image(self.current_idx)
-
-# --------------------------------
-# Entry point
-# --------------------------------
-if __name__ == "__main__":
-    # All row indices in the parquet file
-    all_indices = list(range(len(df)))
-    viewer = ImageViewer(df, all_indices, start_idx=0)
-    viewer.mainloop()
