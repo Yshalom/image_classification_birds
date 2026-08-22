@@ -52,7 +52,7 @@ def extract_label_names_from_readme(readme_path: str, label_name_path: tuple[str
         # Extract class IDs and names from each line
         # Expected format: "  - 0: 'CLASS NAME'" or similar indented list format
         class_ids = (int(l[names_nested_level + 1:l.find(":") - 1]) for l in lines)
-        class_names = (l[l.find(":") + 2:] for l in lines)
+        class_names = (l[l.find(":") + 2:].strip() for l in lines)
 
         # Create a dictionary mapping class ID to class name
         id_to_name_map = dict(zip(class_ids, class_names))

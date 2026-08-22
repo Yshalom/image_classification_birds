@@ -1,13 +1,40 @@
 import unittest
 import sys
 import os
+import tempfile
+import shutil
 import pandas as pd
 from unittest.mock import patch, MagicMock
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from database_viewer.image_viewer import ImageViewer
+from database_reader.bird_database import BirdDatabase
 
+DUMMY_README_CONTENT = """---
+database_header:
+  section:
+  - name: dummy name here
+    dtype: dummy_type_here
+  - name: label
+    dtype:
+      class_label:
+        names:
+          '0': SPECIES_A
+          '1': SPECIES_B
+          '2': SPECIES_C
+---"""
+
+LABEL_NAME_PATH = (
+    "database_header:",
+    "section:",
+    "name: label",
+    "dtype:",
+    "class_label:",
+    "names:"
+)
+
+# 1 black pixel, RGB mode, PNG format
 DUMMY_IMAGE_BYTES = bytes(( \
     0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, \
     0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, \
@@ -20,22 +47,37 @@ class TestImageViewer(unittest.TestCase):
     """Test cases for the database_viewer.image_viewer.ImageViewer class."""
 
     def setUp(self):
-        """Set up a dummy DataFrame and other parameters for testing."""
-        # Create a dummy DataFrame with the expected structure
-        # The DataFrame should have a column "image" which is a dict with "bytes"
-        # and a column "label" which is an integer.
+        """Set up temporary files for testing."""
+        # Create a temporary directory
+        self.test_dir = tempfile.mkdtemp()
+
+        # Create a dummy parquet file
+        self.parquet_path = os.path.join(self.test_dir, "test.parquet")
+
+        # Create a simple DataFrame with image bytes and labels
         self.df = pd.DataFrame({
-            # The database has 2 rows
-            "image": [{"bytes": DUMMY_IMAGE_BYTES}, {"bytes": DUMMY_IMAGE_BYTES}],
-            "label": [0, 1]
+            "image": [{"bytes": DUMMY_IMAGE_BYTES}, {"bytes": DUMMY_IMAGE_BYTES}, {"bytes": DUMMY_IMAGE_BYTES}],
+            "label": [0, 1, 2]
         })
-        self.label_names = ["SPECIES_A", "SPECIES_B"]
+        self.df.to_parquet(self.parquet_path)
+
+        # Create a dummy README.md file with the expected structure
+        self.readme_path = os.path.join(self.test_dir, "README.md")
+        with open(self.readme_path, 'w') as f:
+            f.write(DUMMY_README_CONTENT)
+
+        self.bird_db = BirdDatabase(self.parquet_path, self.readme_path, LABEL_NAME_PATH)
+
+    def tearDown(self):
+        """Clean up temporary files."""
+        shutil.rmtree(self.test_dir)
 
     @patch('database_viewer.image_viewer.ttk.Label')
     @patch('database_viewer.image_viewer.ttk.Button')
     @patch('database_viewer.image_viewer.ttk.Frame')
     def test_initialization(self, MockFrame, MockButton, MockLabel):
         """Test that the ImageViewer can be initialized (with mocked objects)."""
+        # The patch is already applied from above
 
         # Configure the mocks to return mock objects
         mock_label_instance = MockLabel.return_value
@@ -55,57 +97,22 @@ class TestImageViewer(unittest.TestCase):
         ImageViewer.resizable = MagicMock()
 
         # Create an instance of ImageViewer
-        viewer = ImageViewer(self.df, self.label_names, start_idx=0)
+        viewer = ImageViewer(self.bird_db, start_idx=0)
 
         # Check that the attributes are set correctly
-        self.assertIs(viewer.df, self.df)
-        self.assertEqual(viewer.label_names, self.label_names)
+        self.assertIs(viewer.bird_db, self.bird_db)
         self.assertEqual(viewer.current_idx, 0)
 
-        # Check that the Tkinter mocks were used
-        self.assertEqual(viewer.title.call_count, 1) # _display_image is MagicMock therefore it doesn't call 'title'
+        # Check that Tkinter mocks were used
+        # Note: Since we replaced the tkinter module, we can't easily check the mock calls
+        # but we can check that our mocks were used
+        self.assertEqual(viewer.title.call_count, 1)
         self.assertEqual(viewer.resizable.call_count, 1)
 
         # Check that the labels and buttons were created
-        # We expect at least the image_label and current_label to be created
-        # and the buttons for navigation.
-        # Note: The exact number of labels and buttons is fixed in the code.
-        # We'll just check that the mocks were called a reasonable number of times.
-        self.assertGreaterEqual(MockLabel.call_count, 2)  # image_label and current_label
-        self.assertGreaterEqual(MockButton.call_count, 6)  # 6 navigation buttons
-        self.assertGreaterEqual(MockFrame.call_count, 1)
-
-    @patch('database_viewer.image_viewer.ttk.Label')
-    @patch('database_viewer.image_viewer.ttk.Button')
-    @patch('database_viewer.image_viewer.ttk.Frame')
-    def test_get_species_name(self, MockFrame, MockButton, MockLabel):
-        """Test the _get_species_name method."""
-
-        # Configure the mocks to return mock objects
-        mock_label_instance = MockLabel.return_value
-        mock_label_instance.pack = MagicMock()
-        mock_label_instance.configure = MagicMock()
-
-        mock_button_instance = MockButton.return_value
-        mock_button_instance.grid = MagicMock()
-
-        mock_frame_instance = MockFrame.return_value
-        mock_frame_instance.pack = MagicMock()
-        mock_frame_instance.grid = MagicMock()
-
-        # Mock ImageViewer's methods to do nothing but record calls
-        ImageViewer._display_image = MagicMock()
-        ImageViewer.title = MagicMock()
-        ImageViewer.resizable = MagicMock()
-        viewer = ImageViewer(self.df, self.label_names, start_idx=0)
-
-        # Test known label IDs
-        self.assertEqual(viewer._get_species_name(0), "SPECIES_A")
-        self.assertEqual(viewer._get_species_name(1), "SPECIES_B")
-
-        # Test out of range label ID
-        self.assertEqual(viewer._get_species_name(2), "UNKNOWN CLASS 2")
-        self.assertEqual(viewer._get_species_name(-1), "UNKNOWN CLASS -1")
+        self.assertGreaterEqual(mock_label_instance.pack.call_count, 1)  # image_label
+        self.assertGreaterEqual(mock_button_instance.grid.call_count, 6)  # 6 navigation buttons
+        self.assertGreaterEqual(mock_frame_instance.pack.call_count, 1) # btn_frame
 
     @patch('database_viewer.image_viewer.ttk.Label')
     @patch('database_viewer.image_viewer.ttk.Button')
@@ -113,7 +120,7 @@ class TestImageViewer(unittest.TestCase):
     def test_step_functions(self, MockFrame, MockButton, MockLabel):
         """Test the step functions by checking that they change current_idx correctly."""
 
-        # Configure the mocks to return mock objects
+        # Configure the ttk mocks
         mock_label_instance = MockLabel.return_value
         mock_label_instance.pack = MagicMock()
         mock_label_instance.configure = MagicMock()
@@ -129,7 +136,9 @@ class TestImageViewer(unittest.TestCase):
         ImageViewer._display_image = MagicMock()
         ImageViewer.title = MagicMock()
         ImageViewer.resizable = MagicMock()
-        viewer = ImageViewer(self.df, self.label_names, start_idx=0)
+
+        # Create an instance of ImageViewer
+        viewer = ImageViewer(self.bird_db, start_idx=0)
 
         # Test initial state
         self.assertEqual(viewer.current_idx, 0)
@@ -148,28 +157,29 @@ class TestImageViewer(unittest.TestCase):
         viewer._display_image.assert_called_once_with(0)
         viewer._display_image.reset_mock()
 
-        # Test _show_next_10 (should go to index (0 + 10) % 2 = 0)
+        # Test _show_next_10 (should go to index (0 + 10) % 3 = 1)
         viewer._show_next_10()
-        self.assertEqual(viewer.current_idx, 0)
-        viewer._display_image.assert_called_once_with(0)
+        self.assertEqual(viewer.current_idx, 1)
+        viewer._display_image.assert_called_once_with(1)
         viewer._display_image.reset_mock()
 
-        # Test _show_previous_10 (should go to index (0 - 10) % 2 = 0 because -10 % 2 = 0)
+        # Test _show_previous_10 (should go to index (1 - 10) % 3 = 0)
         viewer._show_previous_10()
         self.assertEqual(viewer.current_idx, 0)
         viewer._display_image.assert_called_once_with(0)
         viewer._display_image.reset_mock()
 
-        # Test _show_next_100 (should go to index (0 + 100) % 2 = 0)
+        # Test _show_next_100 (should go to index (0 + 100) % 3 = 1)
         viewer._show_next_100()
-        self.assertEqual(viewer.current_idx, 0)
-        viewer._display_image.assert_called_once_with(0)
+        self.assertEqual(viewer.current_idx, 1)
+        viewer._display_image.assert_called_once_with(1)
         viewer._display_image.reset_mock()
 
-        # Test _show_previous_100 (should go to index (0 - 100) % 2 = 0)
+        # Test _show_previous_100 (should go to index (1 - 100) % 3 = 0)
         viewer._show_previous_100()
         self.assertEqual(viewer.current_idx, 0)
         viewer._display_image.assert_called_once_with(0)
+        viewer._display_image.reset_mock()
 
 if __name__ == '__main__':
     unittest.main()

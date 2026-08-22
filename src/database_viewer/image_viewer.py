@@ -6,31 +6,27 @@ Contains the GUI application for viewing bird species images.
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
-import pandas as pd
-import io
 
-from typing import Iterable
+from database_reader.bird_database import BirdDatabase
 
 class ImageViewer(tk.Tk):
     """
     A GUI application that shows images from the parquet file with navigation.
     """
 
-    def __init__(self, df: pd.DataFrame, label_names: Iterable[str], start_idx: int = 0):
+    def __init__(self, bird_db: BirdDatabase, start_idx: int = 0):
         """
         Initialize the ImageViewer.
 
         Args:
-            df: DataFrame containing the bird species data
-            label_names: label names where index corresponds to class ID
+            bird_db: BirdDatabase instance containing the data and label names.
             start_idx: Starting index (what index in df is shown at launch)
         """
         super().__init__()
         self.title("Bird Species Image Viewer")
         self.resizable(False, False)
 
-        self.df = df
-        self.label_names = label_names
+        self.bird_db = bird_db
         self.current_idx = start_idx
 
         # Label that will hold the image
@@ -98,8 +94,8 @@ class ImageViewer(tk.Tk):
         Args:
             idx: Index in the indices list to display
         """
-        row = self.df.iloc[idx]
-        pil_img = Image.open(io.BytesIO(row["image"]["bytes"])).convert("RGB")
+        # Get the image from the bird database
+        pil_img: Image = self.bird_db.get_img(idx)
 
         # Resize for comfortable viewing while preserving aspect ratio
         pil_img.thumbnail((480, 480))
@@ -108,28 +104,11 @@ class ImageViewer(tk.Tk):
         self.image_label.configure(image=photo)
 
         # Update window title with the bird name (using the mapped species name)
-        label_id = row["label"].item()
-        species_name = self._get_species_name(label_id)
+        species_name = self.bird_db.get_label(idx)
         self.title(f"Bird Species - {species_name}")
 
         # Update the current-index label in the button bar
-        self.current_label.configure(text=f"Index {self.current_idx + 1}/{len(self.df)}")
-
-    def _get_species_name(self, label_id: int) -> str:
-        """
-        Translate a numeric label to its species name using the label_names list.
-        If the index is out of range we fall back to "UNKNOWN CLASS " + str(label_id)
-
-        Args:
-            label_id (int): Numeric label ID
-
-        Returns:
-            str: Species name corresponding to the label ID
-        """
-        if not isinstance(label_id, int) \
-            or label_id < 0 or len(self.label_names) <= label_id:
-            return "UNKNOWN CLASS " + str(label_id)
-        return self.label_names[int(label_id)]
+        self.current_label.configure(text=f"Index {self.current_idx + 1}/{len(self.bird_db)}")
 
     # ----- step functions -------------------------------------------------
     def _show_next_1(self):
@@ -163,5 +142,5 @@ class ImageViewer(tk.Tk):
         Args:
             delta (int): Number of steps to advance (can be negative)
         """
-        self.current_idx = (self.current_idx + delta) % len(self.df)
+        self.current_idx = (self.current_idx + delta) % len(self.bird_db)
         self._display_image(self.current_idx)

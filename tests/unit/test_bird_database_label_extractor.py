@@ -2,32 +2,10 @@ import unittest
 import sys
 import os
 
-README_PATH = "database/birds-525-species-image-classification/README.md"
-
-# Path of the class label names in the README.md nested structure
-#   +------------------------+
-#   | dataset_info:          |
-#   |   features:            |
-#   |     name: label        |
-#   |       dtype:           |
-#   |         class_label:   |
-#   |           names:       |
-#   |             '0': $NAME |
-#   |             '1': $NAME |
-#   |             ...        |
-#   +------------------------+
-LABEL_NAME_PATH = (
-    "dataset_info:",
-    "features:",
-    "name: label",
-    "dtype:",
-    "class_label:",
-    "names:"
-)
-
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
-from bird_database.label_extractor import extract_label_names_from_readme
+from database_reader.label_extractor import extract_label_names_from_readme
+from constants import README_PATH, LABEL_NAME_PATH
 
 class TestBirdDatabaseLabelExtractor(unittest.TestCase):
     """Test cases for the bird_database.label_extractor module."""
