@@ -2,9 +2,30 @@ import unittest
 import sys
 import os
 
-src_path = os.path.join(os.path.dirname(__file__), '..', '..', 'src')
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
+README_PATH = "database/birds-525-species-image-classification/README.md"
+
+# Path of the class label names in the README.md nested structure
+#   +------------------------+
+#   | dataset_info:          |
+#   |   features:            |
+#   |     name: label        |
+#   |       dtype:           |
+#   |         class_label:   |
+#   |           names:       |
+#   |             '0': $NAME |
+#   |             '1': $NAME |
+#   |             ...        |
+#   +------------------------+
+LABEL_NAME_PATH = (
+    "dataset_info:",
+    "features:",
+    "name: label",
+    "dtype:",
+    "class_label:",
+    "names:"
+)
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from bird_database.label_extractor import extract_label_names_from_readme
 
@@ -13,18 +34,9 @@ class TestBirdDatabaseLabelExtractor(unittest.TestCase):
 
     def test_extract_label_names_from_readme_success(self):
         """Test that extract_label_names_from_readme successfully extracts labels from README."""
-        readme_path = "database/birds-525-species-image-classification/README.md"
-        label_name_path = [
-            "dataset_info:",
-            "features:",
-            "name: label",
-            "dtype:",
-            "class_label:",
-            "names:"
-        ]
         try:
-            label_names = extract_label_names_from_readme(readme_path, label_name_path)
-            self.assertIsInstance(label_names, list)
+            label_names = extract_label_names_from_readme(README_PATH, LABEL_NAME_PATH)
+            self.assertIsInstance(label_names, tuple)
             self.assertGreater(len(label_names), 0)
             # Check that the first element is a string
             if label_names:
@@ -38,7 +50,7 @@ class TestBirdDatabaseLabelExtractor(unittest.TestCase):
     def test_extract_label_names_invalid_path(self):
         """Test that extract_label_names_from_readme raises an exception for an invalid path."""
         with self.assertRaises(Exception):
-            extract_label_names_from_readme("non/existent/path.md", ["dummy"])
+            extract_label_names_from_readme("non/existent/path.md", ("dummy", ))
 
 if __name__ == '__main__':
     unittest.main()

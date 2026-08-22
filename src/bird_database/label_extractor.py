@@ -3,31 +3,30 @@ Label extractor module for the bird species image viewer.
 Handles extracting label names from the README file.
 """
 
-
-def extract_label_names_from_readme(readme_path: str, label_name_path: list[str]) -> list[str]:
+def extract_label_names_from_readme(readme_path: str, label_name_path: tuple[str]) -> tuple[str]:
     """
     Parse the README file to extract label names using a specific nested structure path.
 
     This function navigates through the README file by searching for each string in
     label_name_path in sequence, then extracts the indented list that follows,
-    parsing it to get class ID to name mappings.
+    parsing it to get class ID to name mappings
+    (the result is a tuple of strings, where class-ID is the index, and the string is the label).
 
     Args:
         readme_path (str): Path to the README file
         label_name_path (list[str]): List of strings representing the nested path
-                                   to the label names section (e.g., ["dataset_info:",
-                                   "features:", "name: label", "dtype:", "class_label:", "names:"])
-
+                                   to the label names section.
     Returns:
-        list[str]: List of label names where index corresponds to class ID (0-based, sequential)
+        tuple of label names where index corresponds to class ID (0-based, sequential)
 
     Raises:
-        Exception: If the README.md file structure is corrupted or labels cannot be extracted
+        FileNotFoundError: chained from the 'open' function.  
+        Exception: If the README.md file structure is corrupted or labels cannot be extracted.
     """
     # Read the entire README file
     with open(readme_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
-
+    
     try:
         # Navigate through the nested structure by finding each section in order
         for section_name in label_name_path:
@@ -60,7 +59,7 @@ def extract_label_names_from_readme(readme_path: str, label_name_path: list[str]
 
         # Build a list where index = class ID, assuming sequential IDs starting from 0
         # The length should match the number of lines we processed
-        return [id_to_name_map[i] for i in range(len(lines))]
+        return tuple(id_to_name_map[i] for i in range(len(lines)))
 
     except Exception as e:
         raise Exception("The README.md file structure is corrupted") from e

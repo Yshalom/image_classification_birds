@@ -6,31 +6,31 @@ Contains the GUI application for viewing bird species images.
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
+import pandas as pd
 import io
 
+from typing import Iterable
 
 class ImageViewer(tk.Tk):
     """
     A GUI application that shows images from the parquet file with navigation.
     """
 
-    def __init__(self, df, indices, label_names, start_idx=0):
+    def __init__(self, df: pd.DataFrame, label_names: Iterable[str], start_idx: int = 0):
         """
         Initialize the ImageViewer.
 
         Args:
-            df (pd.DataFrame): DataFrame containing the bird species data
-            indices (list): List of valid row indices to display
-            label_names (list): List of label names where index corresponds to class ID
-            start_idx (int): Starting index in the indices list
+            df: DataFrame containing the bird species data
+            label_names: label names where index corresponds to class ID
+            start_idx: Starting index (what index in df is shown at launch)
         """
         super().__init__()
         self.title("Bird Species Image Viewer")
         self.resizable(False, False)
 
         self.df = df
-        self.indices = list(indices)          # list of valid row indices
-        self.label_names = label_names        # list of label names
+        self.label_names = label_names
         self.current_idx = start_idx
 
         # Label that will hold the image
@@ -96,25 +96,24 @@ class ImageViewer(tk.Tk):
         Load the image at position idx, convert it for display, and update UI.
 
         Args:
-            idx (int): Index in the indices list to display
+            idx: Index in the indices list to display
         """
-        row = self.df.iloc[self.indices[idx]]
+        row = self.df.iloc[idx]
         pil_img = Image.open(io.BytesIO(row["image"]["bytes"])).convert("RGB")
 
         # Resize for comfortable viewing while preserving aspect ratio
-        max_w, max_h = 480, 480
-        pil_img.thumbnail((max_w, max_h))
+        pil_img.thumbnail((480, 480))
 
-        self.photo = ImageTk.PhotoImage(pil_img)  # keep a reference!
-        self.image_label.configure(image=self.photo)
+        photo = ImageTk.PhotoImage(pil_img)
+        self.image_label.configure(image=photo)
 
         # Update window title with the bird name (using the mapped species name)
-        label_id = row["label"]
+        label_id = row["label"].item()
         species_name = self._get_species_name(label_id)
         self.title(f"Bird Species - {species_name}")
 
         # Update the current-index label in the button bar
-        self.current_label.configure(text=f"Index {self.current_idx + 1}/{len(self.indices)}")
+        self.current_label.configure(text=f"Index {self.current_idx + 1}/{len(self.df)}")
 
     def _get_species_name(self, label_id: int) -> str:
         """
@@ -127,10 +126,10 @@ class ImageViewer(tk.Tk):
         Returns:
             str: Species name corresponding to the label ID
         """
-        try:
-            return self.label_names[int(label_id)]
-        except IndexError:
+        if not isinstance(label_id, int) \
+            or label_id < 0 or len(self.label_names) <= label_id:
             return "UNKNOWN CLASS " + str(label_id)
+        return self.label_names[int(label_id)]
 
     # ----- step functions -------------------------------------------------
     def _show_next_1(self):
@@ -164,5 +163,5 @@ class ImageViewer(tk.Tk):
         Args:
             delta (int): Number of steps to advance (can be negative)
         """
-        self.current_idx = (self.current_idx + delta) % len(self.indices)
+        self.current_idx = (self.current_idx + delta) % len(self.df)
         self._display_image(self.current_idx)
