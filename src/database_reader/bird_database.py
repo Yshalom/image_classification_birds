@@ -27,10 +27,10 @@ class BirdDatabase:
             label_name_path: Tuple of strings representing the nested path to the label names in the README.
         """
         # Read the pandas database
-        self.df = pd.read_parquet(db_path)
+        self._df = pd.read_parquet(db_path)
 
         # Extract the label names from the README and strip whitespace
-        self.label_names = extract_label_names_from_readme(readme_path, label_name_path)
+        self._label_names = extract_label_names_from_readme(readme_path, label_name_path)
 
     def get_id(self, row_idx: int) -> int:
         """
@@ -42,9 +42,9 @@ class BirdDatabase:
         Returns:
             The class ID (integer) of the row.
         """
-        if not isinstance(row_idx, int) or row_idx < 0 or len(self.df) <= row_idx:
+        if not isinstance(row_idx, int) or row_idx < 0 or len(self._df) <= row_idx:
             raise IndexError(f"The row-index='{row_idx}' is invalid")
-        row = self.df.iloc[row_idx]
+        row = self._df.iloc[row_idx]
         return int(row["label"])
 
     def get_label(self, row_idx: int) -> str:
@@ -59,15 +59,15 @@ class BirdDatabase:
             The string label corresponding to the class ID of the row.
         """
         # Get the class ID: use actual if in bounds, otherwise use row_idx as fallback
-        if 0 <= row_idx < len(self.df):
-            row = self.df.iloc[row_idx]
+        if 0 <= row_idx < len(self._df):
+            row = self._df.iloc[row_idx]
             label_id = int(row["label"])
         else:
             return f"UNKNOWN CLASS {row_idx}"
 
         # Return the label name if in bounds, otherwise unknown class format
-        if 0 <= label_id < len(self.label_names):
-            return self.label_names[label_id]
+        if 0 <= label_id < len(self._label_names):
+            return self._label_names[label_id]
         else:
             return f"UNKNOWN CLASS {label_id}"
 
@@ -84,7 +84,7 @@ class BirdDatabase:
         Raises:
             IndexError: If row_idx is out of bounds.
         """
-        row = self.df.iloc[row_idx]  # This will raise IndexError if out of bounds
+        row = self._df.iloc[row_idx]  # This will raise IndexError if out of bounds
         image_bytes = row["image"]["bytes"]
         pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         return pil_img
@@ -103,4 +103,8 @@ class BirdDatabase:
         return np.array(pil_img)
 
     def __len__(self) -> int:
-        return len(self.df)
+        return len(self._df)
+
+    @property
+    def num_of_classes(self):
+        return len(self._label_names)

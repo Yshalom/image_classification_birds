@@ -19,7 +19,7 @@ def main():
     print("Loading dataset and extracting label names...")
     bird_db = BirdDatabase(DB_TEST_PATH, README_PATH, LABEL_NAME_PATH)
     print(f"Dataset loaded with {len(bird_db)} samples")
-    print(f"Extracted {len(bird_db.label_names)} label names")
+    print(f"Extracted {bird_db.num_of_classes} label names")
 
     # Create and run the viewer
     print("Starting image viewer...")

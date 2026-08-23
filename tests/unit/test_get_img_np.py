@@ -21,12 +21,12 @@ class TestGetImgNp(unittest.TestCase):
         dummy_img.save(buf, format="PNG")
         image_bytes = buf.getvalue()
         # Create a DataFrame with one row
-        self.db.df = pd.DataFrame([{
+        self.db._df = pd.DataFrame([{
             "label": 0,
             "image": {"bytes": image_bytes}
         }])
         # Set label names to avoid any issues in get_label (though not used in get_img_np)
-        self.db.label_names = ("dummy_label", )
+        self.db._label_names = ("dummy_label", )
 
     def test_returns_numpy_array(self):
         """The function should return a NumPy ndarray."""
@@ -57,7 +57,7 @@ class TestGetImgNp(unittest.TestCase):
         blue_img.save(buf, format="PNG")
         image_bytes = buf.getvalue()
         # Update the DataFrame's image bytes for the same row (index 0)
-        self.db.df.at[0, "image"] = {"bytes": image_bytes}
+        self.db._df.at[0, "image"] = {"bytes": image_bytes}
         result = self.db.get_img_np(0)
         # height=4, width=2 => shape (4, 2, 3)
         self.assertEqual(result.shape, (4, 2, 3))
