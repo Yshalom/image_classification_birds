@@ -1,13 +1,14 @@
 """
 Bird database module for handling the pandas DataFrame and label extraction.
 """
-
+import numpy as np
 import pandas as pd
 from PIL import Image
 import io
 from typing import Tuple
 
-from database_reader.label_extractor import extract_label_names_from_readme
+from .label_extractor import extract_label_names_from_readme
+
 
 class BirdDatabase:
     """
@@ -45,7 +46,7 @@ class BirdDatabase:
             raise IndexError(f"The row-index='{row_idx}' is invalid")
         row = self.df.iloc[row_idx]
         return int(row["label"])
-        
+
     def get_label(self, row_idx: int) -> str:
         """
         Return the literal string class ID's label of the row at the given index.
@@ -87,6 +88,19 @@ class BirdDatabase:
         image_bytes = row["image"]["bytes"]
         pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         return pil_img
+
+    def get_img_np(self, row_idx: int) -> np.ndarray:
+        """
+        Return the image as a NumPy array.
+
+        Args:
+            row_idx: Index of the row in the DataFrame.
+
+        Returns:
+            A NumPy array of shape (height, width, 3) representing the image.
+        """
+        pil_img = self.get_img(row_idx)
+        return np.array(pil_img)
 
     def __len__(self) -> int:
         return len(self.df)
