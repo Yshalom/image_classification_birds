@@ -1,4 +1,4 @@
-DB_PATH = "database/birds-525-species-image-classification/data/test-00000-of-00001.parquet"
+DB_TEST_PATH = "database/birds-525-species-image-classification/data/test-00000-of-00001.parquet"
 README_PATH = "database/birds-525-species-image-classification/README.md"
 
 # Path of the class label names in the README.md nested structure
@@ -21,3 +21,6 @@ LABEL_NAME_PATH = (
     "class_label:",
     "names:"
 )
+
+NUM_OF_CLASSES = 525
+IMAGE_SIZE = (224, 224)
