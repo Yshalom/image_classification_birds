@@ -28,57 +28,58 @@ class SimpleCNN(nn.Module):
         """
         super(SimpleCNN, self).__init__()
 
+        self.input_dtype = DTYPE
+
         # Convolutional layers
-        self.conv1 = nn.Conv2d(3, 12, kernel_size=3, dtype=DTYPE)
-        self.conv2 = nn.Conv2d(12, 48, kernel_size=3, dtype=DTYPE)
-        self.conv3 = nn.Conv2d(48, 64, kernel_size=3, dtype=DTYPE)
+        self.features = nn.Sequential(
+            # shape = (B, 3, 94, 94)
+            nn.Conv2d(3, 12, kernel_size=3, dtype=DTYPE),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
 
-        # Pooling layer
-        self.pool = nn.MaxPool2d(2, 2)
+            # shape = (B, 12, 46, 46)
+            nn.Conv2d(12, 48, kernel_size=3, dtype=DTYPE),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
 
-        # Fully connected layers
-        # Assuming input image size will be pooled 3 times (divide by 8)
-        # We'll use adaptive pooling to handle variable sizes
-        self.adaptive_pool = nn.AdaptiveAvgPool2d((2, 2))
-        self.fc1 = nn.Linear(256, 256, dtype=DTYPE) # 2*2*64 = 256
-        self.fc2 = nn.Linear(256, num_classes, dtype=DTYPE)
+            # shape = (B, 48, 22, 22)
+            nn.Conv2d(48, 48, kernel_size=3, dtype=DTYPE),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
 
-        # Dropout for regularization
-        self.dropout = nn.Dropout(0.3)
+            # shape = (B, 48, 10, 10)
+            nn.Conv2d(48, 48, kernel_size=3, dtype=DTYPE),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2)
+        )
 
-        # Activation function
-        self.inner_activation = nn.ELU()
-        self.last_activation = nn.Softmax(dim=1)
+
+        # shape = (B, 48, 4, 4)
+        self.avgpool = nn.AdaptiveAvgPool2d((2, 2))
+
+        # shape = (B, 48*2*2)
+        self.classifier = nn.Sequential(
+            nn.Dropout(p=0.5),
+            nn.Linear(192, 96, dtype=DTYPE),
+            nn.ReLU(inplace=True),
+
+            nn.Dropout(p=0.5),
+            nn.Linear(96, 96, dtype=DTYPE),
+            nn.ReLU(inplace=True),
+
+            nn.Linear(96, num_classes, dtype=DTYPE)
+        )
 
     def forward(self, x: torch.Tensor):
         """
         Forward pass through the network.
         """
-        # Convert to DTYPE and normalize input
-        x = x.type(DTYPE) / 255
-
-        # Convolutional layers
-        for conv_layer in (self.conv1, self.conv2, self.conv3):
-            x = conv_layer(x)
-            x = self.pool(x)
-            x = self.inner_activation(x)
-        
-        # Adaptive pooling to fixed size
-        x = self.adaptive_pool(x)
-
-        # Flatten for fully connected layers
-        x = x.view(x.size(0), -1)
-
-        # Fully connected layers
-        x = self.fc1(x)
-        x = self.inner_activation(x)
-        x = self.dropout(x)
-        x = self.fc2(x)
-
-        # Convert to probabilities
-        x = self.last_activation(x)
-        
+        x = self.features(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
         return x
+
 
 if __name__ == "__main__":
     # Simple test

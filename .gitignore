@@ -2,3 +2,6 @@
 __pycache__/
 venv/
 database/
+*.csv
+*.svg
+*.pt

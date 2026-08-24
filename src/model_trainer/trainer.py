@@ -33,10 +33,11 @@ from constants import DB_TEST_PATH, DB_TRAIN_PATHS, DB_VALIDATION_PATH, README_P
 DTYPE = torch.uint8
 TRAINING_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 CACHE_DEVICE = TRAINING_DEVICE
-BATCH_SIZE = 256
-TRAINING_EPOCHS = 50
-LOGGING_INTERVAL = 5
+BATCH_SIZE = 128
+TRAINING_EPOCHS = 300
+LOGGING_INTERVAL = 30
 AMOUNT_OF_MODELS = 5
+LEARNING_RATE = 0.005
 
 def _load_model_module(model_file_path: str):
     """
@@ -159,8 +160,9 @@ def evaluate_model(model: nn.Module, image_cache: ImageCache) -> float:
             # Get batch from cache
             batch_images, batch_labels = image_cache[start_idx:end_idx]
 
-            # Move to device and convert type
-            batch_images = batch_images.to(TRAINING_DEVICE).type(DTYPE)
+            # Move to device, convert type and normalize
+            batch_images = batch_images.to(TRAINING_DEVICE).to(model.input_dtype) / 255
+            # Move to device
             batch_labels = batch_labels.to(TRAINING_DEVICE)
 
             outputs = model(batch_images)
@@ -234,8 +236,9 @@ def _train_epoch(model: nn.Module,
         # Get batch from cache
         batch_images, batch_labels = train_cache[indices[start_idx:end_idx]]
 
-        # Move to device and convert type
-        batch_images = batch_images.to(TRAINING_DEVICE)
+        # Move to device, convert type and normalize
+        batch_images = batch_images.to(TRAINING_DEVICE).to(model.input_dtype) / 255
+        # Move to device
         batch_labels = batch_labels.to(TRAINING_DEVICE)
 
         # Forward pass
@@ -314,14 +317,14 @@ def train_model(model: nn.Module,
     """
     # Initialize training components
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters())
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     # Training loop
     for epoch in range(1, TRAINING_EPOCHS + 1):
         _train_epoch(model, train_cache, optimizer, criterion)
 
         # Evaluate and log every several epochs
-        if epoch % LOGGING_INTERVAL == 0 or epoch == TRAINING_DEVICE:
+        if epoch % LOGGING_INTERVAL == 0 or epoch == TRAINING_DEVICE or epoch == 1:
             _evaluate_and_log(model, train_cache, test_cache, val_cache, epoch, log_file)
 
 
