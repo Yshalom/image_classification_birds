@@ -28,16 +28,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from database_reader.bird_database import BirdDatabase
 from image_cache import ImageCache
-from constants import DB_TEST_PATH, DB_TRAIN_PATHS, DB_VALIDATION_PATH, README_PATH, LABEL_NAME_PATH, IMAGE_SIZE
+from constants import DB_TEST_PATH, DB_TRAIN_PATHS, DB_VALIDATION_PATH, README_PATH, LABEL_NAME_PATH
 
 DTYPE = torch.uint8
 TRAINING_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 CACHE_DEVICE = TRAINING_DEVICE
-BATCH_SIZE = 128
+BATCH_SIZE = 2048
 TRAINING_EPOCHS = 300
 LOGGING_INTERVAL = 30
 AMOUNT_OF_MODELS = 5
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.001
 
 def _load_model_module(model_file_path: str):
     """
@@ -133,6 +133,27 @@ def import_model_class(model_file_path: str, class_name: str | None = None) -> T
         else:
             # Multiple classes found
             raise ValueError(f"Multiple model classes found: {[name for name, _ in model_classes]}")
+
+def import_image_size(model_file_path: str) -> Tuple[int, int]:
+    """
+    Import the IMAGE_SIZE constant from a model file.
+
+    Args:
+        model_file_path (str): Path to the Python file containing the model class
+
+    Returns:
+        Tuple[int, int]: The image size tuple
+
+    Raises:
+        ValueError: If IMAGE_SIZE is not defined in the module or is not a valid tuple
+    """
+    module = _load_model_module(model_file_path)
+    if not hasattr(module, "IMAGE_SIZE"):
+        raise ValueError(f"IMAGE_SIZE not found in {model_file_path}")
+    size = getattr(module, "IMAGE_SIZE")
+    if not isinstance(size, tuple) or len(size) != 2:
+        raise ValueError(f"IMAGE_SIZE must be a tuple of two ints, got {size}")
+    return size
 
 def evaluate_model(model: nn.Module, image_cache: ImageCache) -> float:
     """
@@ -366,9 +387,11 @@ def main():
 
         # Create image caches for efficient training
         print(f"Creating image caches ...")
-        test_cache = ImageCache(test_db, IMAGE_SIZE, CACHE_DEVICE)
-        val_cache = ImageCache(val_db, IMAGE_SIZE, CACHE_DEVICE)
-        train_cache = ImageCache(train_db, IMAGE_SIZE, CACHE_DEVICE)
+        # Import the IMAGE_SIZE constant from the model file
+        image_size = import_image_size(model_file_path)
+        test_cache = ImageCache(test_db, image_size, CACHE_DEVICE)
+        val_cache = ImageCache(val_db, image_size, CACHE_DEVICE)
+        train_cache = ImageCache(train_db, image_size, CACHE_DEVICE)
         print("Image caches were created")
 
         # Create log & weights directories
