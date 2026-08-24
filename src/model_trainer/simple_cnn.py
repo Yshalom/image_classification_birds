@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from constants import NUM_OF_CLASSES
 
 DTYPE = torch.bfloat16
+IMAGE_SIZE = (94, 94)
 
 class SimpleCNN(nn.Module):
     """

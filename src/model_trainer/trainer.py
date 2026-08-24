@@ -32,11 +32,11 @@ from constants import DB_TEST_PATH, DB_TRAIN_PATHS, DB_VALIDATION_PATH, README_P
 
 DTYPE = torch.uint8
 TRAINING_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-CACHE_DEVICE = TRAINING_DEVICE
-BATCH_SIZE = 2048
-TRAINING_EPOCHS = 300
-LOGGING_INTERVAL = 30
-AMOUNT_OF_MODELS = 5
+CACHE_DEVICE = torch.device("cpu")
+BATCH_SIZE = 1024
+TRAINING_EPOCHS = 30
+LOGGING_INTERVAL = 3
+AMOUNT_OF_MODELS = 2
 LEARNING_RATE = 0.001
 
 def _load_model_module(model_file_path: str):
