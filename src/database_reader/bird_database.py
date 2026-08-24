@@ -71,7 +71,7 @@ class BirdDatabase:
         else:
             return f"UNKNOWN CLASS {label_id}"
 
-    def get_img(self, row_idx: int) -> Image.Image:
+    def get_img(self, row_idx: int, size : tuple[int, int] | None = None) -> Image.Image:
         """
         Return the image object of the row at the given index.
 
@@ -87,9 +87,11 @@ class BirdDatabase:
         row = self._df.iloc[row_idx]  # This will raise IndexError if out of bounds
         image_bytes = row["image"]["bytes"]
         pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        if size:
+            return pil_img.resize(size)
         return pil_img
 
-    def get_img_np(self, row_idx: int) -> np.ndarray:
+    def get_img_np(self, row_idx: int, size : tuple[int, int] | None = None) -> np.ndarray:
         """
         Return the image as a NumPy array.
 
@@ -99,7 +101,7 @@ class BirdDatabase:
         Returns:
             A NumPy array of shape (height, width, 3) representing the image.
         """
-        pil_img = self.get_img(row_idx)
+        pil_img = self.get_img(row_idx, size)
         return np.array(pil_img)
 
     def __len__(self) -> int:
