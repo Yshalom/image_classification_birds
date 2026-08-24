@@ -9,7 +9,6 @@ import torch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from database_reader.bird_database import BirdDatabase
-from constants import IMAGE_SIZE
 
 class ImageCache:
     """
@@ -19,7 +18,7 @@ class ImageCache:
 
     def __init__(self,
                  database: BirdDatabase,
-                 image_size: tuple[int, int] = IMAGE_SIZE,
+                 image_size: tuple[int, int],
                  device: torch.device = torch.device("cpu")):
         """
         Initialize the ImageCache by pre-loading all images from the database.
@@ -35,19 +34,19 @@ class ImageCache:
 
         # Pre-load all images and convert to tensors
         print(f"Pre-loading {len(database)} images into cache...")
-        self._image_tensors = []
-        self._labels = []
+        self._image_tensors = [None] * len(database)
+        self._labels = [None] * len(database)
 
         for idx in range(len(database)):
             # Get image as numpy array and convert to tensor
             img_array = database.get_img_np(idx, image_size)  # shape=(height, width, 3)
             img_array = img_array.transpose(2, 0, 1)          # shape=(3, height, width)
             img_tensor = torch.from_numpy(img_array)
-            self._image_tensors.append(img_tensor)
+            self._image_tensors[idx] = img_tensor
 
             # Get label
             label = database.get_id(idx)
-            self._labels.append(label)
+            self._labels[idx] = label
 
             # Progress indicator
             if (idx + 1) % 1000 == 0:
