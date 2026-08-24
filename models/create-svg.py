@@ -31,8 +31,8 @@ RESET = "\033[0m"
 # ----------------------------------------------------------------------
 # Configuration constants
 # ----------------------------------------------------------------------
-COLOR_LIST = ['#ff000077', '#00ff0077', '#0000ff77', '#ff770077', '#7700ff77', '#00777777']
-AVERAGE_COLOR = "#777777"
+COLOR_LIST = ['#ff0000', '#00ff00', '#0000ff', '#ff7700', '#7700ff', '#007777']
+AVERAGE_COLOR = "white"
 
 # Mapping from canonical y-field name to the name used for the SVG file
 GRAPH_NAME_MAP = {
@@ -85,7 +85,7 @@ POINT_COORDINATES_LABEL_Y_OFFSET = 4
 POINT_COORDINATES_LABEL_Y_INDEX_OFFSET = 14
 
 # SVG overall layout
-SVG_BACKGROUND = None
+SVG_BACKGROUND = "black"
 SVG_HEADER_STR = f'<svg width="{CANVAS_WIDTH}" height="{CANVAS_HEIGHT}" xmlns="http://www.w3.org/2000/svg" version="1.1">'
 SVG_TAIL_STR = "</svg>"
 
@@ -474,10 +474,11 @@ def draw_labels(svg_parts: list[str], labels, label_x, label_y_start, label_spac
     """Add series labels in the top-right corner."""
     for idx, label in enumerate(labels):
         label_y = label_y_start + idx * label_spacing
+        color = COLOR_LIST[idx % len(COLOR_LIST)]
         svg_parts.append(
             f'  <text x="{label_x}" y="{label_y}" '
             f'font-family="sans-serif" font-size="{LABEL_FONT_SIZE}" '
-            f'fill="{COLOR_LIST[idx]}">{label}</text>')
+            f'fill="{color}">{label}</text>')
 
 def draw_rectangle(svg_parts: list[str], width, height, color) -> None:
     svg_parts.append(f'<rect width="{width}" height="{height}" fill="{color}"/>')

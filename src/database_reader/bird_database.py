@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 import io
-from typing import Tuple
+from typing import Tuple, Iterable
 
 from .label_extractor import extract_label_names_from_readme
 
@@ -13,21 +13,27 @@ from .label_extractor import extract_label_names_from_readme
 class BirdDatabase:
     """
     A class to handle the bird species dataset.
-    This class is responsible for reading the parquet file and extracting label names.
+    This class is responsible for reading the parquet file(s) and extracting label names.
     It provides methods to get the class ID, label string, and image for a given row index.
     """
 
-    def __init__(self, db_path: str, readme_path: str, label_name_path: Tuple[str]):
+    def __init__(self, db_path: str | Iterable[str], readme_path: str, label_name_path: Tuple[str]):
         """
-        Initialize the BirdDatabase by reading the parquet file and extracting label names.
+        Initialize the BirdDatabase by reading the parquet file(s) and extracting label names.
 
         Args:
-            db_path: Path to the parquet file containing the dataset.
+            db_path: Path to the parquet file or iterable of paths containing the dataset.
             readme_path: Path to the README.md file containing label information.
             label_name_path: Tuple of strings representing the nested path to the label names in the README.
         """
-        # Read the pandas database
-        self._df = pd.read_parquet(db_path)
+        # Read the pandas database(s)
+        if isinstance(db_path, str):
+            # Read single parquet file
+            self._df = pd.read_parquet(db_path)
+        else:
+            # Read and concatenate multiple parquet files
+            dfs = [pd.read_parquet(path) for path in db_path]
+            self._df = pd.concat(dfs, ignore_index=True)
 
         # Extract the label names from the README and strip whitespace
         self._label_names = extract_label_names_from_readme(readme_path, label_name_path)
@@ -102,7 +108,7 @@ class BirdDatabase:
             A NumPy array of shape (height, width, 3) representing the image.
         """
         pil_img = self.get_img(row_idx, size)
-        return np.array(pil_img)
+        return np.array(pil_img).astype(np.uint8)
 
     def __len__(self) -> int:
         return len(self._df)
