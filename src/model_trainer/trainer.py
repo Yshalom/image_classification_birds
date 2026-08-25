@@ -26,58 +26,19 @@ import torch.optim as optim
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from database_reader.bird_database import BirdDatabase
-from image_cache import ImageCache
 from constants import DB_TEST_PATH, DB_TRAIN_PATHS, DB_VALIDATION_PATH, README_PATH, LABEL_NAME_PATH
-from model_trainer.model_loader import import_model_class, import_image_size
+from image_cache import ImageCache
+from model_loader import import_model_class, import_image_size
+from accuracy_getter import evaluate_accuracy_and_log, evaluate_loss_and_log
 
 DTYPE = torch.uint8
 TRAINING_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 CACHE_DEVICE = torch.device("cpu")
 BATCH_SIZE = 2048
-TRAINING_EPOCHS = 150
-LOGGING_INTERVAL = 10
+TRAINING_EPOCHS = 100
+LOGGING_INTERVAL = 5
 AMOUNT_OF_MODELS = 1
 LEARNING_RATE = 0.001
-
-
-def evaluate_model(model: nn.Module, image_cache: ImageCache) -> float:
-    """
-    Evaluate the model on a database and return average loss.
-
-    Args:
-        model: The PyTorch model to evaluate
-        image_cache: ImageCache instance containing pre-loaded images
-
-    Returns:
-        float: Average loss over the database
-    """
-    criterion = nn.CrossEntropyLoss()
-    total_loss = 0.0
-
-    with torch.no_grad():
-        # Process in batches to avoid memory issues
-        batch_size = min(BATCH_SIZE, len(image_cache))
-        num_batches = (len(image_cache) + batch_size - 1) // batch_size
-
-        for batch_idx in range(num_batches):
-            start_idx = batch_idx * batch_size
-            end_idx = min(start_idx + batch_size, len(image_cache))
-
-            # Get batch from cache
-            batch_images, batch_labels = image_cache[start_idx:end_idx]
-
-            # Move to device, convert type and normalize
-            batch_images = batch_images.to(TRAINING_DEVICE).to(model.input_dtype) / 255
-            # Move to device
-            batch_labels = batch_labels.to(TRAINING_DEVICE)
-
-            outputs = model(batch_images)
-            loss = criterion(outputs, batch_labels)
-
-            total_loss += loss.item() * len(batch_images)
-
-    return total_loss / len(image_cache)
-
 
 def _prepare_training_directories(model_file_path: str) -> tuple[str, str]:
     """
@@ -96,7 +57,6 @@ def _prepare_training_directories(model_file_path: str) -> tuple[str, str]:
     os.makedirs(weights_dir, exist_ok=True)
     return log_dir, weights_dir
 
-
 def _create_log_file(log_dir: str, model_id: int) -> str:
     """
     Create and initialize the CSV log file.
@@ -112,7 +72,6 @@ def _create_log_file(log_dir: str, model_id: int) -> str:
     with open(log_file, 'w') as f:
         f.write("training loops, loss(DB-train), loss(DB-test), loss(DB-validation)\n")
     return log_file
-
 
 def _train_epoch(model: nn.Module,
                  train_cache: ImageCache,
@@ -155,41 +114,7 @@ def _train_epoch(model: nn.Module,
         loss.backward()
         optimizer.step()
 
-
-def _evaluate_and_log(model: nn.Module,
-                      train_cache: ImageCache,
-                      test_cache: ImageCache,
-                      val_cache: ImageCache,
-                      epoch: int,
-                      log_file: str) -> None:
-    """
-    Evaluate model and log results.
-
-    Args:
-        model: The PyTorch model to evaluate
-        train_cache: ImageCache containing training images
-        test_cache: ImageCache containing test images
-        val_cache: ImageCache containing validation images
-        epoch: Current epoch number
-        log_file: Path to log file
-    """
-    model.eval()
-    avg_train_loss = evaluate_model(model, train_cache)
-    avg_test_loss = evaluate_model(model, test_cache)
-    avg_val_loss = evaluate_model(model, val_cache)
-
-    # Log to CSV
-    with open(log_file, 'a') as f:
-        f.write(f"{epoch},{avg_train_loss:.6f},{avg_test_loss:.6f},{avg_val_loss:.6f}\n")
-
-    print(f"Epoch [{epoch}], "
-        f"Train Loss: {avg_train_loss:.6f}, Test Loss: {avg_test_loss:.6f}, "
-        f"Val Loss: {avg_val_loss:.6f}")
-
-
-def _save_model_weights(model: nn.Module,
-                        weights_dir: str,
-                        model_id: int) -> None:
+def save_model_weights(model: nn.Module, weights_file: str) -> None:
     """
     Save model weights to file.
 
@@ -201,10 +126,8 @@ def _save_model_weights(model: nn.Module,
     Returns:
         Path to the saved weights file
     """
-    weights_file = os.path.join(weights_dir, f'model-{model_id}.pt')
     torch.save(model.state_dict(), weights_file)
-    print(f"Model {model_id} weights saved to {weights_file}")
-
+    print(f"Model weights saved to {weights_file}")
 
 def train_model(model: nn.Module,
                 train_cache: ImageCache,
@@ -231,8 +154,7 @@ def train_model(model: nn.Module,
 
         # Evaluate and log every several epochs
         if epoch % LOGGING_INTERVAL == 0 or epoch == TRAINING_DEVICE or epoch == 1:
-            _evaluate_and_log(model, train_cache, test_cache, val_cache, epoch, log_file)
-
+            evaluate_loss_and_log(model, train_cache, test_cache, val_cache, BATCH_SIZE, TRAINING_DEVICE, epoch, log_file)
 
 def main():
     """Main function to run the model training."""
@@ -298,7 +220,10 @@ def main():
             train_model(model, train_cache, test_cache, val_cache, log_file_path)
 
             # Save the model
-            _save_model_weights(model, weights_dir, i)
+            weights_file = os.path.join(weights_dir, f'model-{i}.pt')
+            weights_file = os.path.join(log_dir, f'model-{i}-accuracy.txt')
+            save_model_weights(model, weights_dir, weights_file)
+            evaluate_accuracy_and_log(model, train_cache, test_cache, val_cache, BATCH_SIZE, TRAINING_DEVICE, "")
 
             print(f"Completed training for model instance {i}/{AMOUNT_OF_MODELS}\n")
 
