@@ -72,17 +72,17 @@ AVERAGE_LINE_WIDTH = 2
 
 # Text appearance
 LABEL_FONT_SIZE = 16
-TICK_LABEL_FONT_SIZE = 12
+TICK_LABEL_FONT_SIZE = 14
 LABEL_SPACING_VERT = 20
 LABEL_OFFSET_FROM_TOP = PADDING_TOP // 2
 LABEL_OFFSET_FROM_RIGHT = 10
 TITLE_FONT_SIZE = 24
 TITLE_OFFSET_FROM_TOP = 30
 TITLE_COLOR = "blue"
-POINT_COORDINATES_LABEL_FONT_SIZE = 12
+POINT_COORDINATES_LABEL_FONT_SIZE = 14
 POINT_COORDINATES_LABEL_X_OFFSET = -30
 POINT_COORDINATES_LABEL_Y_OFFSET = 4
-POINT_COORDINATES_LABEL_Y_INDEX_OFFSET = 14
+POINT_COORDINATES_LABEL_Y_INDEX_OFFSET = 20
 
 # SVG overall layout
 SVG_BACKGROUND = "black"
@@ -130,8 +130,7 @@ def read_single_csv(filepath: str) -> \
         reader = csv.reader(f)
         try:
             header = [h.strip() for h in next(reader)]
-            # Keep everything except the final line
-            rows = list(reader)[:-1]
+            rows = list(reader)
         except StopIteration:
             raise ValueError("CSV file is empty.")
 
