@@ -66,7 +66,6 @@ class SimpleCNN(nn.Module):
             # shape = (B, 256, 5, 5)
         ).to(DTYPE)
 
-        # shape = (B, 8*7*7)
         self.classifier = nn.Sequential(
             # Change from AlexNet (6400, 4096) -> (6400, 1024)
             nn.Linear(6400, 1024, dtype=DTYPE),
