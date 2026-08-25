@@ -16,7 +16,9 @@ EVALUATE_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.d
 CACHE_DEVICE = torch.device("cpu")
 BATCH_SIZE = 2048
 
-MODEL_WEIGHTS_FILE = "/weights/model-1.pt"
+MODEL_WEIGHTS_FILES = ["try-1/weights/model-1.pt",
+                       "try-2/weights/model-1.pt"
+                       ]
 
 def evaluate_model(model: nn.Module, image_cache: ImageCache) -> float:
     """
@@ -148,10 +150,11 @@ def main():
         train_cache = ImageCache(train_db, image_size, CACHE_DEVICE)
         print("Image caches were created")
 
-        model_dir = os.path.dirname(model_file_path)
-        model = load_model_weights(model_dir + MODEL_WEIGHTS_FILE, ModelClass)
+        for model_weights_file in MODEL_WEIGHTS_FILES:
+            model_dir = os.path.dirname(model_file_path)
+            model = load_model_weights(model_dir + "\\" + model_weights_file, ModelClass)
 
-        evaluate_and_log(model, train_cache, test_cache, val_cache, model_dir + "accuracy.txt")
+            evaluate_and_log(model, train_cache, test_cache, val_cache, model_dir + "\\" + model_weights_file.split('.')[0] + "-accuracy.txt")
 
         print("All training completed!")
 

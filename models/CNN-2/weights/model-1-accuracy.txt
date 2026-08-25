@@ -1,0 +1,3 @@
+train-accuracy: 60.057896%
+test-accuracy:  62.019043%
+val_accuracy:   57.333332%
