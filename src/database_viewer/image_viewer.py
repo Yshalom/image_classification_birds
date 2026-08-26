@@ -8,6 +8,9 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 
 from database_reader.bird_database import BirdDatabase
+from database_viewer.image_manipulator import manipulate_image
+
+MANIPULATE_IMAGE = True
 
 class ImageViewer(tk.Tk):
     """
@@ -96,6 +99,8 @@ class ImageViewer(tk.Tk):
         """
         # Get the image from the bird database
         pil_img: Image = self.bird_db.get_img(idx)
+        if MANIPULATE_IMAGE:
+            pil_img = manipulate_image(pil_img)
 
         # Resize for comfortable viewing while preserving aspect ratio
         pil_img.thumbnail((480, 480))

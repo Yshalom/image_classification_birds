@@ -21,7 +21,7 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
+from torchvision import transforms
 
 # Add src to path to import from database_reader
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -77,7 +77,9 @@ def _create_log_file(log_dir: str, model_id: int) -> str:
 def _train_epoch(model: nn.Module,
                  train_cache: ImageCache,
                  optimizer: optim.Adam,
-                 criterion: nn.CrossEntropyLoss) -> None:
+                 criterion: nn.CrossEntropyLoss,
+                 image_transform_filter: transforms.Compose | None = None
+                 ) -> None:
     """
     Train for one epoch.
 
@@ -107,6 +109,9 @@ def _train_epoch(model: nn.Module,
         # Move to device
         batch_labels = batch_labels.to(TRAINING_DEVICE)
 
+        # Run the transform filter
+        batch_images = image_transform_filter(batch_images)
+
         # Forward pass
         outputs = model(batch_images)
         loss = criterion(outputs, batch_labels)
@@ -134,7 +139,9 @@ def train_model(model: nn.Module,
                 train_cache: ImageCache,
                 test_cache: ImageCache,
                 val_cache: ImageCache,
-                log_file: str):
+                log_file: str,
+                image_transform_filter: transforms.Compose | None = None
+                ):
     """
     Train a single model instance.
 
@@ -152,7 +159,7 @@ def train_model(model: nn.Module,
     # Training loop
     for epoch in range(1, TRAINING_EPOCHS + 1):
         time.sleep(10)
-        _train_epoch(model, train_cache, optimizer, criterion)
+        _train_epoch(model, train_cache, optimizer, criterion, image_transform_filter)
 
         # Evaluate and log every several epochs
         if epoch % LOGGING_INTERVAL == 0 or epoch == TRAINING_DEVICE or epoch == 1:
@@ -172,7 +179,34 @@ def main():
         # Import the model class
         print(f"Importing model from {model_file_path}")
         ModelClass = import_model_class(model_file_path, class_name)
+        image_size = import_image_size(model_file_path)
         print(f"Successfully imported model class: {ModelClass.__name__}")
+
+        # Make the image 'transforms.Compose' filter
+        image_transform_filter = transforms.Compose([
+            transforms.RandomResizedCrop(
+                size=(image_size, image_size),
+                scale=(0.8, 1),
+                ratio=(3/4, 4/3)
+            ),
+            transforms.RandomErasing(
+                p=0.5,
+                scale=(0.01, 0.05), # (1%, 5%)
+                ratio=(3/4, 4/3)
+            ),
+            transforms.RandomErasing(
+                p=0.5,
+                scale=(0.01, 0.05), # (1%, 5%)
+                ratio=(3/4, 4/3)
+            ),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(
+                brightness=(0.7, 1.3),
+                contrast=(0.7, 1.3),
+                saturation=(0.7, 1.3),
+                hue=(-0.05, 0.05)
+            )
+        ])
 
         # Initialize databases
         print("Loading bird databases...")
@@ -196,8 +230,6 @@ def main():
 
         # Create image caches for efficient training
         print(f"Creating image caches ...")
-        # Import the IMAGE_SIZE constant from the model file
-        image_size = import_image_size(model_file_path)
         test_cache = ImageCache(test_db, image_size, CACHE_DEVICE)
         val_cache = ImageCache(val_db, image_size, CACHE_DEVICE)
         train_cache = ImageCache(train_db, image_size, CACHE_DEVICE)
@@ -219,7 +251,7 @@ def main():
             log_file_path = _create_log_file(log_dir, i)
 
             # Train this instance
-            train_model(model, train_cache, test_cache, val_cache, log_file_path)
+            train_model(model, train_cache, test_cache, val_cache, log_file_path, image_transform_filter)
 
             # Save the model
             weights_file = os.path.join(weights_dir, f'model-{i}.pt')
