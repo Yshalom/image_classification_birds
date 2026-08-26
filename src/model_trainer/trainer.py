@@ -17,6 +17,7 @@ This program:
 
 import os
 import sys
+import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -36,7 +37,7 @@ TRAINING_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.d
 CACHE_DEVICE = torch.device("cpu")
 BATCH_SIZE = 2048
 TRAINING_EPOCHS = 100
-LOGGING_INTERVAL = 5
+LOGGING_INTERVAL = 10
 AMOUNT_OF_MODELS = 1
 LEARNING_RATE = 0.001
 
@@ -150,6 +151,7 @@ def train_model(model: nn.Module,
 
     # Training loop
     for epoch in range(1, TRAINING_EPOCHS + 1):
+        time.sleep(15)
         _train_epoch(model, train_cache, optimizer, criterion)
 
         # Evaluate and log every several epochs
@@ -221,9 +223,9 @@ def main():
 
             # Save the model
             weights_file = os.path.join(weights_dir, f'model-{i}.pt')
-            weights_file = os.path.join(log_dir, f'model-{i}-accuracy.txt')
-            save_model_weights(model, weights_dir, weights_file)
-            evaluate_accuracy_and_log(model, train_cache, test_cache, val_cache, BATCH_SIZE, TRAINING_DEVICE, "")
+            accuracy_log_file = os.path.join(log_dir, f'model-{i}-accuracy.txt')
+            save_model_weights(model, weights_file)
+            evaluate_accuracy_and_log(model, train_cache, test_cache, val_cache, BATCH_SIZE, TRAINING_DEVICE, accuracy_log_file)
 
             print(f"Completed training for model instance {i}/{AMOUNT_OF_MODELS}\n")
 
