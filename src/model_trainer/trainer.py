@@ -151,7 +151,7 @@ def train_model(model: nn.Module,
 
     # Training loop
     for epoch in range(1, TRAINING_EPOCHS + 1):
-        time.sleep(15)
+        time.sleep(10)
         _train_epoch(model, train_cache, optimizer, criterion)
 
         # Evaluate and log every several epochs
