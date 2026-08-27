@@ -79,11 +79,5 @@ class SimpleCNN(nn.Module):
 
 if __name__ == "__main__":
     # Simple test
-    model = SimpleCNN(num_classes=10)
+    model = SimpleCNN()
     print(f"SimpleCNN model created with {sum(p.numel() for p in model.parameters())} parameters")
-
-    # Test forward pass
-    dummy_input = torch.randn(1, 3, 32, 32)
-    output = model(dummy_input)
-    print(f"Input shape: {dummy_input.shape}")
-    print(f"Output shape: {output.shape}")

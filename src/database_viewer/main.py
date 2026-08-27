@@ -9,7 +9,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from database_reader.bird_database import BirdDatabase
 from image_viewer import ImageViewer
-from constants import DB_TEST_PATH, README_PATH, LABEL_NAME_PATH
+from constants import DB_TRAIN_PATHS, README_PATH, LABEL_NAME_PATH
 
 def main():
     """
@@ -17,7 +17,7 @@ def main():
     """
     # Load dataset and extract label names using BirdDatabase
     print("Loading dataset and extracting label names...")
-    bird_db = BirdDatabase(DB_TEST_PATH, README_PATH, LABEL_NAME_PATH)
+    bird_db = BirdDatabase(DB_TRAIN_PATHS, README_PATH, LABEL_NAME_PATH)
     print(f"Dataset loaded with {len(bird_db)} samples")
     print(f"Extracted {bird_db.num_of_classes} label names")
 

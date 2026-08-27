@@ -14,7 +14,7 @@ from constants import NUM_OF_CLASSES
 DTYPE = torch.bfloat16
 IMAGE_SIZE = (224, 224)
 
-class SimpleCNN(nn.Module):
+class AlexNetLike(nn.Module):
     """
     A simple CNN for image classification with minimal layers.
     Suitable for weak testing environments as requested.
@@ -27,7 +27,7 @@ class SimpleCNN(nn.Module):
         Args:
             num_classes (int): Number of output classes (default: 525 for bird species)
         """
-        super(SimpleCNN, self).__init__()
+        super(AlexNetLike, self).__init__()
 
         self.input_dtype = DTYPE
 
@@ -97,11 +97,6 @@ class SimpleCNN(nn.Module):
 
 if __name__ == "__main__":
     # Simple test
-    model = SimpleCNN(num_classes=10)
+    model = AlexNetLike()
     print(f"SimpleCNN model created with {sum(p.numel() for p in model.parameters())} parameters")
 
-    # Test forward pass
-    dummy_input = torch.randn(1, 3, 32, 32)
-    output = model(dummy_input)
-    print(f"Input shape: {dummy_input.shape}")
-    print(f"Output shape: {output.shape}")

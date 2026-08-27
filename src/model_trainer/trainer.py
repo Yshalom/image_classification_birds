@@ -36,12 +36,12 @@ DTYPE = torch.uint8
 TRAINING_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 CACHE_DEVICE = torch.device("cpu")
 BATCH_SIZE = 2048
-TRAINING_EPOCHS = 100
-LOGGING_INTERVAL = 15
+TRAINING_EPOCHS = 60
+LOGGING_INTERVAL = 30
 AMOUNT_OF_MODELS = 1
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0005
 
-SLEEP_INTERVAL = 10
+SLEEP_INTERVAL = 30
 
 def _prepare_training_directories(model_file_path: str) -> tuple[str, str]:
     """
@@ -282,7 +282,7 @@ def main():
             
             if os.path.exists(weights_file):
                 load_model_weights(model, weights_file)
-                load_model_weights(optimizer, weights_file)
+                load_model_weights(optimizer, optimizer_file)
             else:
                 # Create log file
                 _create_log_file(log_file)
@@ -292,7 +292,7 @@ def main():
 
             # Save the model
             save_model_weights(model, weights_file)
-            save_model_weights(optimizer, weights_file)
+            save_model_weights(optimizer, optimizer_file)
             evaluate_accuracy_and_log(model, train_cache, test_cache, val_cache, BATCH_SIZE, TRAINING_DEVICE, accuracy_log_file)
 
             print(f"Completed training for model instance {i}/{AMOUNT_OF_MODELS}\n")

@@ -47,7 +47,7 @@ class SimpleCNN(nn.Module):
             nn.MaxPool2d(3, 2),
             # shape = (B, 96, 26, 26)
             
-            # ----------- bloc-2 -----------
+            # ----------- block-2 -----------
             nn.Conv2d(96, 192, 3, padding=1),
             # shape = (B, 192, 26, 26)
             nn.ReLU(),
@@ -57,17 +57,17 @@ class SimpleCNN(nn.Module):
             nn.MaxPool2d(3, 2),
             # shape = (B, 256, 12, 12)
             
-            # ----------- conv-3 -----------
+            # ----------- block-3 -----------
             nn.Conv2d(256, 384, 3, padding=1),
             # shape = (B, 384, 12, 12)
             nn.ReLU(),
 
-            # ----------- conv-4 -----------
+            # ----------- block-4 -----------
             nn.Conv2d(384, 384, 3, padding=1),
             # shape = (B, 384, 12, 12)
             nn.ReLU(),
 
-            # ----------- conv-5 -----------
+            # ----------- block-5 -----------
             nn.Conv2d(384, 256, 3, padding=1),
             # shape = (B, 256, 12, 12)
             nn.ReLU(),
@@ -103,11 +103,5 @@ class SimpleCNN(nn.Module):
 
 if __name__ == "__main__":
     # Simple test
-    model = SimpleCNN(num_classes=10)
+    model = SimpleCNN()
     print(f"SimpleCNN model created with {sum(p.numel() for p in model.parameters())} parameters")
-
-    # Test forward pass
-    dummy_input = torch.randn(1, 3, 32, 32)
-    output = model(dummy_input)
-    print(f"Input shape: {dummy_input.shape}")
-    print(f"Output shape: {output.shape}")
