@@ -78,7 +78,7 @@ class SimpleCNN(nn.Module):
 
             # Change from AlexNet (4096, 4096) -> (512, 512)
             nn.Linear(512, 512, dtype=DTYPE),
-            nn.ReLU(inplace=True),
+            nn.ReLU(),
             nn.Dropout(p=0.5),
 
             # Change from AlexNet (512, 1000) -> (512, num_classes)

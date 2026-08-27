@@ -21,7 +21,7 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import transforms
+from torchvision.transforms import v2
 
 # Add src to path to import from database_reader
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -35,11 +35,13 @@ from accuracy_getter import evaluate_accuracy_and_log, evaluate_loss_and_log
 DTYPE = torch.uint8
 TRAINING_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 CACHE_DEVICE = torch.device("cpu")
-BATCH_SIZE = 2048
+BATCH_SIZE = 1536
 TRAINING_EPOCHS = 100
 LOGGING_INTERVAL = 10
 AMOUNT_OF_MODELS = 1
 LEARNING_RATE = 0.001
+
+SLEEP_INTERVAL = 3
 
 def _prepare_training_directories(model_file_path: str) -> tuple[str, str]:
     """
@@ -78,7 +80,7 @@ def _train_epoch(model: nn.Module,
                  train_cache: ImageCache,
                  optimizer: optim.Adam,
                  criterion: nn.CrossEntropyLoss,
-                 image_transform_filter: transforms.Compose | None = None
+                 image_transform_filter: v2.Compose | None = None
                  ) -> None:
     """
     Train for one epoch.
@@ -104,13 +106,17 @@ def _train_epoch(model: nn.Module,
         # Get batch from cache
         batch_images, batch_labels = train_cache[indices[start_idx:end_idx]]
 
-        # Move to device, convert type and normalize
-        batch_images = batch_images.to(TRAINING_DEVICE).to(model.input_dtype) / 255
+        # Move to device
+        batch_images = batch_images.to(TRAINING_DEVICE)
         # Move to device
         batch_labels = batch_labels.to(TRAINING_DEVICE)
 
         # Run the transform filter
-        batch_images = image_transform_filter(batch_images)
+        if image_transform_filter is not None:
+            batch_images = image_transform_filter(batch_images)
+
+        # Convert type and normalize
+        batch_images = batch_images.to(model.input_dtype) / 255
 
         # Forward pass
         outputs = model(batch_images)
@@ -140,7 +146,7 @@ def train_model(model: nn.Module,
                 test_cache: ImageCache,
                 val_cache: ImageCache,
                 log_file: str,
-                image_transform_filter: transforms.Compose | None = None
+                image_transform_filter: v2.Compose | None = None
                 ):
     """
     Train a single model instance.
@@ -158,7 +164,8 @@ def train_model(model: nn.Module,
 
     # Training loop
     for epoch in range(1, TRAINING_EPOCHS + 1):
-        time.sleep(10)
+        if SLEEP_INTERVAL:
+            time.sleep(SLEEP_INTERVAL)
         _train_epoch(model, train_cache, optimizer, criterion, image_transform_filter)
 
         # Evaluate and log every several epochs
@@ -182,25 +189,25 @@ def main():
         image_size = import_image_size(model_file_path)
         print(f"Successfully imported model class: {ModelClass.__name__}")
 
-        # Make the image 'transforms.Compose' filter
-        image_transform_filter = transforms.Compose([
-            transforms.RandomResizedCrop(
-                size=(image_size, image_size),
+        # Make the image 'transforms.v2.Compose' filter
+        image_transform_filter = v2.Compose([
+            v2.RandomResizedCrop(
+                size=image_size,
                 scale=(0.8, 1),
                 ratio=(3/4, 4/3)
             ),
-            transforms.RandomErasing(
+            v2.RandomErasing(
                 p=0.5,
                 scale=(0.01, 0.05), # (1%, 5%)
                 ratio=(3/4, 4/3)
             ),
-            transforms.RandomErasing(
+            v2.RandomErasing(
                 p=0.5,
                 scale=(0.01, 0.05), # (1%, 5%)
                 ratio=(3/4, 4/3)
             ),
-            transforms.RandomHorizontalFlip(),
-            transforms.ColorJitter(
+            v2.RandomHorizontalFlip(),
+            v2.ColorJitter(
                 brightness=(0.7, 1.3),
                 contrast=(0.7, 1.3),
                 saturation=(0.7, 1.3),
