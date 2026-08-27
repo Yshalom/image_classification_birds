@@ -36,12 +36,12 @@ DTYPE = torch.uint8
 TRAINING_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 CACHE_DEVICE = torch.device("cpu")
 BATCH_SIZE = 2048
-TRAINING_EPOCHS = 200
-LOGGING_INTERVAL = 10
+TRAINING_EPOCHS = 100
+LOGGING_INTERVAL = 15
 AMOUNT_OF_MODELS = 1
-LEARNING_RATE = 0.0012
+LEARNING_RATE = 0.001
 
-SLEEP_INTERVAL = 3
+SLEEP_INTERVAL = 10
 
 def _prepare_training_directories(model_file_path: str) -> tuple[str, str]:
     """
@@ -81,7 +81,7 @@ def _train_epoch(model: nn.Module,
                  optimizer: optim.Adam,
                  criterion: nn.CrossEntropyLoss,
                  image_transform_filter: v2.Compose | None = None
-                 ) -> None:
+                 ) -> float:
     """
     Train for one epoch.
 
@@ -126,7 +126,9 @@ def _train_epoch(model: nn.Module,
         loss.backward()
         optimizer.step()
 
-def save_model_weights(model: nn.Module, weights_file: str) -> None:
+    return loss.item()
+
+def save_model_weights(model: nn.Module | optim.Optimizer, weights_file: str) -> None:
     """
     Save model weights to file.
 
@@ -141,7 +143,7 @@ def save_model_weights(model: nn.Module, weights_file: str) -> None:
     torch.save(model.state_dict(), weights_file)
     print(f"Model weights saved to {weights_file}")
 
-def load_model_weights(model: nn.Module, weights_file: str) -> None:
+def load_model_weights(model: nn.Module | optim.Optimizer, weights_file: str) -> None:
     """
     Save model weights to file.
 
@@ -157,8 +159,8 @@ def load_model_weights(model: nn.Module, weights_file: str) -> None:
     model.load_state_dict(state_dict)
     print(f"Model weights loaded from {weights_file}")
 
-
 def train_model(model: nn.Module,
+                optimizer: optim.Optimizer,
                 train_cache: ImageCache,
                 test_cache: ImageCache,
                 val_cache: ImageCache,
@@ -177,13 +179,13 @@ def train_model(model: nn.Module,
     """
     # Initialize training components
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     # Training loop
     for epoch in range(1, TRAINING_EPOCHS + 1):
         if SLEEP_INTERVAL:
             time.sleep(SLEEP_INTERVAL)
-        _train_epoch(model, train_cache, optimizer, criterion, image_transform_filter)
+        loss = _train_epoch(model, train_cache, optimizer, criterion, image_transform_filter)
+        print(f"loss = {loss:.6f}")
 
         # Evaluate and log every several epochs
         if epoch % LOGGING_INTERVAL == 0 or epoch == TRAINING_DEVICE or epoch == 1:
@@ -270,23 +272,27 @@ def main():
 
             # Define the save paths
             weights_file = os.path.join(weights_dir, f'model-{i}.pt')
+            optimizer_file = os.path.join(weights_dir, f'model-{i}-optimizer.pt')
             accuracy_log_file = os.path.join(log_dir, f'model-{i}-accuracy.txt')
             log_file = os.path.join(log_dir, f'train-{i}.csv')
 
             # Create a new model instance
             model = ModelClass().to(TRAINING_DEVICE)
+            optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
             
             if os.path.exists(weights_file):
                 load_model_weights(model, weights_file)
+                load_model_weights(optimizer, weights_file)
             else:
                 # Create log file
                 _create_log_file(log_file)
 
             # Train this instance
-            train_model(model, train_cache, test_cache, val_cache, log_file, image_transform_filter)
+            train_model(model, optimizer, train_cache, test_cache, val_cache, log_file, image_transform_filter)
 
             # Save the model
             save_model_weights(model, weights_file)
+            save_model_weights(optimizer, weights_file)
             evaluate_accuracy_and_log(model, train_cache, test_cache, val_cache, BATCH_SIZE, TRAINING_DEVICE, accuracy_log_file)
 
             print(f"Completed training for model instance {i}/{AMOUNT_OF_MODELS}\n")

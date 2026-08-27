@@ -75,11 +75,11 @@ class TestBirdDatabase(unittest.TestCase):
         bird_db = BirdDatabase(self.parquet_path, self.readme_path, LABEL_NAME_PATH)
 
         # Check that the DataFrame was loaded
-        self.assertIsInstance(bird_db.df, pd.DataFrame)
-        self.assertEqual(len(bird_db.df), 3)
+        self.assertIsInstance(bird_db._df, pd.DataFrame)
+        self.assertEqual(len(bird_db._df), 3)
 
         # Check that label names were extracted (should be stripped of whitespace)
-        self.assertEqual(bird_db.label_names, ("SPECIES_A", "SPECIES_B", "SPECIES_C"))
+        self.assertEqual(bird_db._label_names, ("SPECIES_A", "SPECIES_B", "SPECIES_C"))
 
     def test_get_id(self):
         """Test the get_id method."""

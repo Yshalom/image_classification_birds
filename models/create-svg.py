@@ -31,9 +31,11 @@ RESET = "\033[0m"
 # ----------------------------------------------------------------------
 # Configuration constants
 # ----------------------------------------------------------------------
-COLOR_LIST = ['#ff0000', '#00ff00', '#0000ff', '#ff7700', '#7700ff', '#007777']
-AVERAGE_COLOR = "white"
-
+GRAPH_COLOR_MAP = {
+    "loss(DB-train)": ("#ff0000", "#ff000077"),
+    "loss(DB-test)": ("#00ff00", "#00ff0077"),
+    "loss(DB-validation)": ("#0000ff", "#0000ff77")
+}
 # Mapping from canonical y-field name to the name used for the SVG file
 GRAPH_NAME_MAP = {
     "loss(DB-train)": "train",
@@ -71,6 +73,7 @@ LINE_WIDTH = 1
 AVERAGE_LINE_WIDTH = 2
 
 # Text appearance
+IMAGE_TITLE = "Training Graph"
 LABEL_FONT_SIZE = 16
 TICK_LABEL_FONT_SIZE = 14
 LABEL_SPACING_VERT = 20
@@ -79,7 +82,7 @@ LABEL_OFFSET_FROM_RIGHT = 10
 TITLE_FONT_SIZE = 24
 TITLE_OFFSET_FROM_TOP = 30
 TITLE_COLOR = "blue"
-POINT_COORDINATES_LABEL_FONT_SIZE = 14
+POINT_COORDINATES_LABEL_FONT_SIZE = 12
 POINT_COORDINATES_LABEL_X_OFFSET = -30
 POINT_COORDINATES_LABEL_Y_OFFSET = 4
 POINT_COORDINATES_LABEL_Y_INDEX_OFFSET = 20
@@ -117,7 +120,7 @@ def format_val(v: float) -> str:
 def read_single_csv(filepath: str) -> \
     tuple[
         tuple[int],                     # x_values
-        dict[str, dict[int, float]],  # data: {y_field: {x -> y}}
+        dict[str, dict[int, float]],  # data: { y_field: { x -> y } }
     ]:
     """
     Read a single CSV file.
@@ -197,20 +200,22 @@ def read_single_csv(filepath: str) -> \
 def read_and_average_csvs(directory: str) -> \
     tuple[
         tuple[str],                         # filenames
-        tuple[int],                         # x_values (training loops)
-        dict[str, dict[(str, int), float]], # series data: {y_field: {(filename, x) -> y_value}} for individual series
-        dict[str, dict[int, float]],        # averaged data: {y_field: {x -> y_avg}}
+        tuple[int],                         # x_values
+        dict[str, tuple[dict[int, float]]], # series data: {y_field: tuple[{ x -> y}] }
+                # for each y_field, multiple functions `x -> y` each one for a file.
+        dict[str, dict[int, float]],        # averaged data: {y_field: { x -> y } }
+                # for each y_field, a function `x -> y`
     ]:
     """
     Read all CSV files in directory and compute averaged y-values across files at same x-position.
 
     Returns:
-        - filenames: tuple of filenames
+        - filenames: tuple of filenames (str) in the same order as the `series_data`'s tuples.
         - x_values: tuple of x values (int) in order of appearance (assumed consistent across files)
-        - series_data: dict mapping each y-field to dict {(filename, x) -> y_value}
-                       where the filename is without extension.
-        - averaged_data: dict mapping each y-field to dict {x -> y_avg}
-                         containing the averaged y values for each x position across all files
+        - series_data: dict mapping each y-field to tuple of dicts { x -> y }
+                       each tuple is the values of a file.
+        - averaged_data: dict mapping each y-field to dict { x -> y }
+                         containing the averaged y values for each x position across all files.
     """
 
     # Find all CSV files in directory
@@ -223,6 +228,7 @@ def read_and_average_csvs(directory: str) -> \
     csv_files.sort()  # For deterministic ordering
 
     # Store data from each file:
+    # filename -> { y_field -> { x -> y } }
     file_data: dict[str, dict[str, dict[int, float]]] = {}
 
     # Read each CSV file
@@ -250,20 +256,20 @@ def read_and_average_csvs(directory: str) -> \
 
     x_values = tuple(x_values)
     y_field_names = tuple(y_field_names)
-    filename = tuple(filenames)
+    filenames = tuple(filenames)
 
     # Prepare return data structures
-    series_data: dict[str, dict[(str, int), float]] = {}  # {y_field: {(filename, x): y_value}}
-    averaged_data: dict[str, dict[int, float]] = {}       # {y_field: {x: y_avg}}
+    series_data: dict[str, dict[(str, int), float]] = {}  # { y_field -> tuple[{ x -> y }] }
+    averaged_data: dict[str, dict[int, float]] = {}       # { y_field -> { x -> y } }
 
     for y_field in y_field_names:
-        series_data[y_field] = {}
+        series_data[y_field] = tuple({} for _ in range(len(filenames)))
         averaged_data[y_field] = {}
         for x in x_values:
             avg = 0
-            for filename in filenames:
+            for idx, filename in enumerate(filenames):
                 val = file_data[filename][y_field][x]
-                series_data[y_field][filename, x] = val
+                series_data[y_field][idx][x] = val
                 avg += val
             averaged_data[y_field][x] = avg / len(filenames)
 
@@ -395,43 +401,41 @@ def draw_axes(svg_parts: list[str], x_min: Number, x_max: Number, y_min: Number,
     )
 
 def draw_series(svg_parts: list[str],
-                subgraph_names: tuple[str],
                 x_values: tuple[int],
-                series_data: dict[(str, int), float],
+                series: dict[int, float],
+                color,
                 sx, sy) -> None:
     """
     Plot individual series: points + connecting lines (no labels).
     Each CSV file gets a different color from COLOR_LIST.
     """
-    for file_idx, subgraph in enumerate(subgraph_names):
-        # Cycle through colors if we have more files than colors
-        color = COLOR_LIST[file_idx % len(COLOR_LIST)]
 
-        points = []  # Store (x, y) coordinates for this series
+    points = []  # Store (x, y) coordinates for this series
 
-        # Collect points for this series in order of x values
-        for x in x_values:
-            # Get the y-value for this file at this x position
-            y = series_data[subgraph, x]
-            cx, cy = sx(x), sy(y)
-            points.append((cx, cy))
+    # Collect points for this series in order of x values
+    for x in x_values:
+        # Get the y-value for this file at this x position
+        y = series[x]
+        cx, cy = sx(x), sy(y)
+        points.append((cx, cy))
 
-            # Draw the point
-            svg_parts.append(
-                f'  <circle cx="{cx:.2f}" cy="{cy:.2f}" r="{POINT_RADIUS}" '
-                f'fill="{color}"/>'
-            )
+        # Draw the point
+        svg_parts.append(
+            f'  <circle cx="{cx:.2f}" cy="{cy:.2f}" r="{POINT_RADIUS}" '
+            f'fill="{color}"/>'
+        )
 
-        # Draw lines connecting consecutive points as a single polyline
-        if len(points) > 1:
-            points_str = " ".join([f"{x:.2f},{y:.2f}" for x, y in points])
-            svg_parts.append(
-                f'  <polyline points="{points_str}" fill="none" stroke="{color}" stroke-width="{LINE_WIDTH}"/>'
-            )
+    # Draw lines connecting consecutive points as a single polyline
+    if len(points) > 1:
+        points_str = " ".join([f"{x:.2f},{y:.2f}" for x, y in points])
+        svg_parts.append(
+            f'  <polyline points="{points_str}" fill="none" stroke="{color}" stroke-width="{LINE_WIDTH}"/>'
+        )
 
 def draw_average_series(svg_parts: list[str],
                         x_values: tuple[int],
                         averaged_series_data: dict[int, float],
+                        color,
                         sx, sy) -> None:
     """
     Plot average series: points + connecting lines + (x,y) labels near points.
@@ -451,7 +455,7 @@ def draw_average_series(svg_parts: list[str],
             # Draw the point
             svg_parts.append(
                 f'  <circle cx="{cx:.2f}" cy="{cy:.2f}" r="{AVERAGE_POINT_RADIUS}" '
-                f'fill="{AVERAGE_COLOR}"/>'
+                f'fill="{color}"/>'
             )
 
             # Add coordinate label above the point
@@ -459,25 +463,22 @@ def draw_average_series(svg_parts: list[str],
             label_cy = cy + POINT_COORDINATES_LABEL_Y_OFFSET + POINT_COORDINATES_LABEL_Y_INDEX_OFFSET * (i % 2 * 2 - 1)
             svg_parts.append(
                 f'  <text x="{label_cx}" y="{label_cy}" '
-                f'font-family="sans-serif" font-size="{POINT_COORDINATES_LABEL_FONT_SIZE}" fill="{AVERAGE_COLOR}">({x}, {format_val(y)})</text>'
+                f'font-family="sans-serif" font-size="{POINT_COORDINATES_LABEL_FONT_SIZE}" fill="{color}">({x}, {format_val(y)})</text>'
             )
 
     # Draw lines connecting consecutive points as a single polyline
     if len(points) > 1:
         points_str = " ".join([f"{x:.2f},{y:.2f}" for x, y in points])
         svg_parts.append(
-            f'  <polyline points="{points_str}" fill="none" stroke="{AVERAGE_COLOR}" stroke-width="{AVERAGE_LINE_WIDTH}"/>'
+            f'  <polyline points="{points_str}" fill="none" stroke="{color}" stroke-width="{AVERAGE_LINE_WIDTH}"/>'
         )
 
-def draw_labels(svg_parts: list[str], labels, label_x, label_y_start, label_spacing):
+def draw_label(svg_parts: list[str], label: str, label_x, label_y, color):
     """Add series labels in the top-right corner."""
-    for idx, label in enumerate(labels):
-        label_y = label_y_start + idx * label_spacing
-        color = COLOR_LIST[idx % len(COLOR_LIST)]
-        svg_parts.append(
-            f'  <text x="{label_x}" y="{label_y}" '
-            f'font-family="sans-serif" font-size="{LABEL_FONT_SIZE}" '
-            f'fill="{color}">{label}</text>')
+    svg_parts.append(
+        f'  <text x="{label_x}" y="{label_y}" '
+        f'font-family="sans-serif" font-size="{LABEL_FONT_SIZE}" '
+        f'fill="{color}">{label}</text>')
 
 def draw_rectangle(svg_parts: list[str], width, height, color) -> None:
     svg_parts.append(f'<rect width="{width}" height="{height}" fill="{color}"/>')
@@ -493,60 +494,6 @@ def draw_title(svg_parts: list[str], title: str, title_x, title_y, color) -> Non
 # SVG creation functions
 # ----------------------------------------------------------------------
 
-def make_svg_parts(
-        subgraphs_names: tuple[str],
-        x_values: tuple[int],
-        individual_series_data: dict[(str, int), float],
-        averaged_series_data: dict[int, float],
-        title: str) -> list[str]:
-    """
-    Create SVG parts showing both individual series and averaged data.
-    """
-    # Compute limits based on both individual and averaged data
-    all_values = []
-
-    # Add individual series values
-    for val in individual_series_data.values():
-        all_values.append(val)
-
-    # Add averaged series values
-    for val in averaged_series_data.values():
-        all_values.append(val)
-
-    if not all_values:
-        raise ValueError("No data to plot")
-    y_min, y_max = compute_limits(all_values)
-
-    x_min, x_max = compute_limits(x_values)
-    scaling_x_func, scaling_y_func = make_scaling(x_min, x_max, y_min, y_max)
-
-    svg_parts: list[str] = []
-    svg_parts.append(SVG_HEADER_STR)
-
-    if SVG_BACKGROUND:
-        draw_rectangle(svg_parts, CANVAS_WIDTH, CANVAS_HEIGHT, SVG_BACKGROUND) # Draw background
-
-    draw_title(svg_parts, title, CANVAS_WIDTH / 2, TITLE_OFFSET_FROM_TOP, TITLE_COLOR)
-
-    draw_grid_and_ticks(svg_parts, x_min, x_max, y_min, y_max, scaling_x_func, scaling_y_func)
-    draw_axes(svg_parts, x_min, x_max, y_min, y_max, scaling_x_func, scaling_y_func)
-
-    # Plot individual series (points + lines, no labels)
-    draw_series(svg_parts, subgraphs_names, x_values, individual_series_data,
-                           scaling_x_func, scaling_y_func)
-
-    # Plot average series (points + lines + labels)
-    draw_average_series(svg_parts, x_values, averaged_series_data,
-                        scaling_x_func, scaling_y_func)
-
-    # Labels for subgraphs series (top-left) - only for individual series
-    label_x = PADDING_LEFT + LABEL_OFFSET_FROM_RIGHT
-    label_y_start = LABEL_OFFSET_FROM_TOP
-    draw_labels(svg_parts, subgraphs_names, label_x, label_y_start, LABEL_SPACING_VERT)
-
-    svg_parts.append(SVG_TAIL_STR)
-    return svg_parts
-
 def write_svg(filepath: str, svg_parts: list[str]) -> None:
     """Write the accumulated SVG lines to disk."""
     try:
@@ -557,38 +504,79 @@ def write_svg(filepath: str, svg_parts: list[str]) -> None:
         print(f"Failed to write SVG file: {e}")
         sys.exit(1)
 
-def create_svg_with_average(subgraph_names: tuple[str], x_values: tuple[int],
-                           series_data: dict[str, dict[(str, int), float]],
-                           averaged_data: dict[str, dict[int, float]],
-                           output_dir: str) -> None:
+def create_svg_with_average(filenames: tuple[str],
+                            x_values: tuple[int],
+                            series_data: dict[str, tuple[dict[int, float]]],
+                            averaged_data: dict[str, dict[int, float]],
+                            output_filename: str) -> None:
     """
-    Create SVG files showing both individual series and averaged data.
-    For each y-field, creates an SVG with:
-    - Individual series (one per CSV file) in different colors, points + lines (no labels)
-    - Average series in bold gray, points + lines + (x,y) labels
+    Create SVG file showing both individual series and averaged data.
+    For each y-field, draw the graph:
+    - Individual series: points + lines (no labels)
+    - Average series: in bold points + lines + (x,y) labels
     """
 
+    # Compute limits based on both individual and averaged data
+    all_y_values = []
+
+    # Add individual series values
+    for series in series_data.values():
+        for vals in series:
+            all_y_values.extend(vals.values())
+
+    # Add averaged series values
+    for vals in averaged_data.values():
+        all_y_values.extend(vals.values())
+
+    if not all_y_values:
+        raise ValueError("No data to plot")
+
+    # Define the scaling functions
+    y_min, y_max = compute_limits(all_y_values)
+    x_min, x_max = compute_limits(x_values)
+    scaling_x_func, scaling_y_func = make_scaling(x_min, x_max, y_min, y_max)
+
+    svg_parts: list[str] = []
+    svg_parts.append(SVG_HEADER_STR)
+
+    # ----------------------------------------------------------------
+    #                    Start drawing the image
+    # ----------------------------------------------------------------
+    if SVG_BACKGROUND:
+        draw_rectangle(svg_parts, CANVAS_WIDTH, CANVAS_HEIGHT, SVG_BACKGROUND) # Draw background
+
+    # Draw title, grid ticks and axes
+    draw_title(svg_parts, IMAGE_TITLE, CANVAS_WIDTH / 2, TITLE_OFFSET_FROM_TOP, TITLE_COLOR)
+    draw_grid_and_ticks(svg_parts, x_min, x_max, y_min, y_max, scaling_x_func, scaling_y_func)
+    draw_axes(svg_parts, x_min, x_max, y_min, y_max, scaling_x_func, scaling_y_func)
+
+    # Coordinates of the labels of subgraphs series (top-left), spaced from each other on the y-axis
+    label_y = LABEL_OFFSET_FROM_TOP
+    label_x = PADDING_LEFT + LABEL_OFFSET_FROM_RIGHT
+
     # Process each y-field
-    for y_field in series_data.keys():
+    for y_field, y_series_data in series_data.items():
         if y_field not in GRAPH_NAME_MAP:
             continue
 
-        graph_name = GRAPH_NAME_MAP[y_field]
-        out_path = os.path.join(output_dir, graph_name + '.svg')
-
         # Get data for this y-field
-        y_series_data = series_data[y_field]      # Individual series data: {(filename, x): y_value}
         y_average_data = averaged_data[y_field]   # Averaged series data: {x: y_avg}
+        average_color, series_color = GRAPH_COLOR_MAP[y_field]
 
-        # Create SVG parts
-        svg_parts = make_svg_parts(
-            subgraph_names, x_values,
-            y_series_data,  # individual series data
-            y_average_data,  # averaged series data
-            y_field
-        )
+        # Draw the label
+        draw_label(svg_parts, GRAPH_NAME_MAP[y_field], label_x, label_y, average_color)
+        label_y += LABEL_SPACING_VERT
 
-        write_svg(out_path, svg_parts)
+        # For all the sub-graphs
+        for subseries_data in y_series_data:        
+            # Plot individual series (points + lines, no labels)
+            draw_series(svg_parts, x_values, subseries_data, series_color, scaling_x_func, scaling_y_func)
+
+        # Plot average series (points + lines + labels)
+        draw_average_series(svg_parts, x_values, y_average_data, average_color, scaling_x_func, scaling_y_func)
+
+    svg_parts.append(SVG_TAIL_STR)
+    write_svg(output_filename, svg_parts)
 
 def plot_to_svg(csv_dir_filepath: str) -> None:
     """
@@ -597,13 +585,14 @@ def plot_to_svg(csv_dir_filepath: str) -> None:
 
     # Read and average all CSV files in the directory
     try:
-        ni_values, x_values, series_data, averaged_data = read_and_average_csvs(csv_dir_filepath)
+        filenames, x_values, series_data, averaged_data = read_and_average_csvs(csv_dir_filepath)
     except Exception as e:
         # Fall back to single file processing if directory reading fails
         raise ValueError(f"Could not read directory for averaging: ") from e
 
     # Create SVGs with both individual and average series
-    create_svg_with_average(ni_values, x_values, series_data, averaged_data, csv_dir_filepath)
+    csv_filename = os.path.join(csv_dir_filepath, 'graph.svg')
+    create_svg_with_average(filenames, x_values, series_data, averaged_data, csv_filename)
 
 # ----------------------------------------------------------------------
 # Main routine

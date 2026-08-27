@@ -8,6 +8,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from image_cache import ImageCache
 
+GREEN_COLOR_ESCAPE = "\033[32m"
+RESET_COLOR_ESCAPE = "\033[0m"
+
 def _evaluate_model_accuracy(model: nn.Module, image_cache: ImageCache, batch_size: int, device: torch.device) -> float:
     """
     Evaluate the model on a database and return average loss.
@@ -71,15 +74,15 @@ def evaluate_accuracy_and_log(model: nn.Module,
     test_accuracy = _evaluate_model_accuracy(model, test_cache, batch_size, device) * 100
     val_accuracy = _evaluate_model_accuracy(model, val_cache, batch_size, device) * 100
 
-    # Log to CSV
-    with open(log_file, 'w') as f:
-        f.write(f"train-accuracy: {train_accuracy:.6f}%\n" \
+    log_content = f"train-accuracy: {train_accuracy:.6f}%\n" \
                 f"test-accuracy:  {test_accuracy:.6f}%\n" \
-                f"val_accuracy:   {val_accuracy:.6f}%\n")
+                f"val-accuracy:   {val_accuracy:.6f}%\n"
 
-    print(f"train-accuracy: {train_accuracy:.6f}%\n" \
-          f"test-accuracy:  {test_accuracy:.6f}%\n" \
-          f"val_accuracy:   {val_accuracy:.6f}%\n")
+    # Log to text file
+    with open(log_file, 'w') as f:
+        f.write(log_content)
+
+    print(log_content)
 
 def _evaluate_model_loss(model: nn.Module, image_cache: ImageCache, batch_size: int, device: torch.device) -> float:
     """
@@ -151,6 +154,7 @@ def evaluate_loss_and_log(model: nn.Module,
     with open(log_file, 'a') as f:
         f.write(f"{epoch},{avg_train_loss:.6f},{avg_test_loss:.6f},{avg_val_loss:.6f}\n")
 
-    print(f"Epoch [{epoch}], "
-        f"Train Loss: {avg_train_loss:.6f}, Test Loss: {avg_test_loss:.6f}, "
-        f"Val Loss: {avg_val_loss:.6f}")
+    print(f"{GREEN_COLOR_ESCAPE}Epoch [{epoch}]:" \
+        f"\n -- Train Loss: {avg_train_loss:.6f}" \
+        f"\n -- Test Loss: {avg_test_loss:.6f}, " \
+        f"\n -- Val Loss: {avg_val_loss:.6f}{RESET_COLOR_ESCAPE}")
