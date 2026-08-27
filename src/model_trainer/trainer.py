@@ -35,11 +35,11 @@ from accuracy_getter import evaluate_accuracy_and_log, evaluate_loss_and_log
 DTYPE = torch.uint8
 TRAINING_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 CACHE_DEVICE = torch.device("cpu")
-BATCH_SIZE = 1536
-TRAINING_EPOCHS = 100
+BATCH_SIZE = 2048
+TRAINING_EPOCHS = 200
 LOGGING_INTERVAL = 10
 AMOUNT_OF_MODELS = 1
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0012
 
 SLEEP_INTERVAL = 3
 
@@ -60,7 +60,7 @@ def _prepare_training_directories(model_file_path: str) -> tuple[str, str]:
     os.makedirs(weights_dir, exist_ok=True)
     return log_dir, weights_dir
 
-def _create_log_file(log_dir: str, model_id: int) -> str:
+def _create_log_file(log_file: str) -> str:
     """
     Create and initialize the CSV log file.
 
@@ -71,7 +71,7 @@ def _create_log_file(log_dir: str, model_id: int) -> str:
     Returns:
         Path to the log file
     """
-    log_file = os.path.join(log_dir, f'train-{model_id}.csv')
+    
     with open(log_file, 'w') as f:
         f.write("training loops, loss(DB-train), loss(DB-test), loss(DB-validation)\n")
     return log_file
@@ -140,6 +140,23 @@ def save_model_weights(model: nn.Module, weights_file: str) -> None:
     """
     torch.save(model.state_dict(), weights_file)
     print(f"Model weights saved to {weights_file}")
+
+def load_model_weights(model: nn.Module, weights_file: str) -> None:
+    """
+    Save model weights to file.
+
+    Args:
+        model: The PyTorch model to save
+        weights_dir: Directory to save weights
+        model_id: ID of this model instance
+
+    Returns:
+        Path to the saved weights file
+    """
+    state_dict = torch.load(weights_file, weights_only=True)
+    model.load_state_dict(state_dict)
+    print(f"Model weights loaded from {weights_file}")
+
 
 def train_model(model: nn.Module,
                 train_cache: ImageCache,
@@ -251,18 +268,24 @@ def main():
             print(f"Starting training for model instance {i}/{AMOUNT_OF_MODELS}")
             print(f"{'='*50}")
 
-            # Create a new model instance
-            model = ModelClass().to(TRAINING_DEVICE)
-
-            # Create log file
-            log_file_path = _create_log_file(log_dir, i)
-
-            # Train this instance
-            train_model(model, train_cache, test_cache, val_cache, log_file_path, image_transform_filter)
-
-            # Save the model
+            # Define the save paths
             weights_file = os.path.join(weights_dir, f'model-{i}.pt')
             accuracy_log_file = os.path.join(log_dir, f'model-{i}-accuracy.txt')
+            log_file = os.path.join(log_dir, f'train-{i}.csv')
+
+            # Create a new model instance
+            model = ModelClass().to(TRAINING_DEVICE)
+            
+            if os.path.exists(weights_file):
+                load_model_weights(model, weights_file)
+            else:
+                # Create log file
+                _create_log_file(log_file)
+
+            # Train this instance
+            train_model(model, train_cache, test_cache, val_cache, log_file, image_transform_filter)
+
+            # Save the model
             save_model_weights(model, weights_file)
             evaluate_accuracy_and_log(model, train_cache, test_cache, val_cache, BATCH_SIZE, TRAINING_DEVICE, accuracy_log_file)
 
