@@ -159,13 +159,20 @@ def load_model_weights(model: nn.Module | optim.Optimizer, weights_file: str) ->
     model.load_state_dict(state_dict)
     print(f"Model weights loaded from {weights_file}")
 
+def load_last_epoch_index(log_filename: str) -> int:
+    with open(log_filename, 'r') as file:
+        last_line = file.readlines()[-1]
+    return int(last_line.split(',')[0])
+
 def train_model(model: nn.Module,
                 optimizer: optim.Optimizer,
+                epochs: int,
                 train_cache: ImageCache,
                 test_cache: ImageCache,
                 val_cache: ImageCache,
                 log_file: str,
-                image_transform_filter: v2.Compose | None = None
+                image_transform_filter: v2.Compose | None = None,
+                start_epoch = 1,
                 ):
     """
     Train a single model instance.
@@ -181,7 +188,7 @@ def train_model(model: nn.Module,
     criterion = nn.CrossEntropyLoss()
 
     # Training loop
-    for epoch in range(1, TRAINING_EPOCHS + 1):
+    for epoch in range(start_epoch, epochs + 1):
         if SLEEP_INTERVAL:
             time.sleep(SLEEP_INTERVAL)
         loss = _train_epoch(model, train_cache, optimizer, criterion, image_transform_filter)
@@ -280,15 +287,24 @@ def main():
             model = ModelClass().to(TRAINING_DEVICE)
             optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
             
-            if os.path.exists(weights_file):
+            if os.path.exists(weights_file) and os.path.exists(optimizer_file) and os.path.exists(log_file):
                 load_model_weights(model, weights_file)
                 load_model_weights(optimizer, optimizer_file)
+                last_epoch_index = load_last_epoch_index(log_file)
             else:
                 # Create log file
                 _create_log_file(log_file)
+                last_epoch_index = 0
 
             # Train this instance
-            train_model(model, optimizer, train_cache, test_cache, val_cache, log_file, image_transform_filter)
+            train_model(
+                model, optimizer,
+                TRAINING_EPOCHS,
+                train_cache, test_cache, val_cache,
+                log_file,
+                image_transform_filter=image_transform_filter,
+                start_epoch = last_epoch_index + 1,
+            )
 
             # Save the model
             save_model_weights(model, weights_file)

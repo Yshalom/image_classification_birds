@@ -144,7 +144,7 @@ The best results I could get with this model were:
 ---
 
 Here I though that maybe AlexNet architecture is too old. I try other architecture which try to mix AlexNet with VGGNet ideas (use multiple convolution of 3 instead of 5,7,11).  
-The (**CNN-3**, `7M` parameters) apply this idea, I tried different sizes of the network, at the end the best I could reach is not better than the AlexNet architecture and I left this idea.  
+The (**CNN-3**, `7M` parameters) apply this idea, I tried different sizes of the network, at the end the best I could reach is not better than the AlexNet architecture and I aborted this idea.  
 I didn't try the **VGG** architecture as it is 138M-144M parameters in size, which of course will cause over fitting.
 
 I also tried another network (**AlexNet-like-4**, `7M` parameters), which also doesn't give me the results I'm looking for.  
@@ -154,11 +154,11 @@ I also tried another network (**AlexNet-like-4**, `7M` parameters), which also d
 # Image Transforms - Adding Data Variance
 
 I tried to train multiple models, with different sizes, learning-rate, batch-size and epochs.
-I got either small-model which don't recognize complex patterns (perform bad on the images), or large models which are over fitted to the training set (and perform bad on the tes & evaluation sets).  
+I got either small-model which don't recognize complex patterns (perform bad on the images), or large models which are over fitted to the training set (and perform bad on the test & evaluation sets).  
 I decided to expand the training data variance with `torchvision.transforms.v2`, and than train a model.
 
 Each image is randomly changed by:
-- corp of the image (at least 80% of the images is saved).
+- crop of the image (at least 80% of the images is saved).
 - 0-2 box erased from the image (a box is 1%-5% of the image).
 - flip
 - color jitter
