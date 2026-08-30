@@ -209,4 +209,12 @@ The results:
     - test-accuracy:  88.761902%
     - val-accuracy:   85.028572%
 
-<img width="400px" src="models/AlexNet-like-5/log/graph.svg">
+<img width="400px" src="models/AlexNet-like-5/try-1/log/graph.svg">
+
+---
+
+As I saw that more parameters means better learning with *AlexNet-like-5*, I tried to go even farther with *AlexNet-like-6* which has `22M` parameters. Though I couldn't see any improvement there.
+
+---
+
+**AlexNet-like-5 gave me good enough results, I'm happy with them, and I stop here**
