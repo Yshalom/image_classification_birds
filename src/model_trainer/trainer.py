@@ -30,18 +30,21 @@ from database_reader.bird_database import BirdDatabase
 from constants import DB_TEST_PATH, DB_TRAIN_PATHS, DB_VALIDATION_PATH, README_PATH, LABEL_NAME_PATH
 from image_cache import ImageCache
 from model_loader import import_model_class, import_image_size
-from accuracy_getter import evaluate_accuracy_and_log, evaluate_loss_and_log
+from accuracy_getter import evaluate_and_log
 
 DTYPE = torch.uint8
 TRAINING_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 CACHE_DEVICE = torch.device("cpu")
-BATCH_SIZE = 2048
-TRAINING_EPOCHS = 60
-LOGGING_INTERVAL = 30
+BATCH_SIZE = 1536
+PARALLEL_BATCH_SIZE = 192
+TRAINING_EPOCHS = 30
+LOGGING_INTERVAL = 10
 AMOUNT_OF_MODELS = 1
-LEARNING_RATE = 0.0005
+LEARNING_RATE = 0.001
 
-SLEEP_INTERVAL = 30
+SLEEP_INTERVAL = 10
+
+assert PARALLEL_BATCH_SIZE < BATCH_SIZE and BATCH_SIZE % PARALLEL_BATCH_SIZE == 0, "Can't run check: BATCH_SIZE & PARALLEL_BATCH_SIZE"
 
 def _prepare_training_directories(model_file_path: str) -> tuple[str, str]:
     """
@@ -94,11 +97,14 @@ def _train_epoch(model: nn.Module,
     # Sample a random batch
     indices = torch.randperm(len(train_cache))
 
-    batch_size = min(BATCH_SIZE, len(train_cache))
-    num_batches = (len(train_cache) + batch_size - 1) // batch_size
+    batch_size = min(PARALLEL_BATCH_SIZE, len(train_cache))
+    num_batches = len(train_cache) // batch_size
+    accumulation_steps = BATCH_SIZE // PARALLEL_BATCH_SIZE
 
     model.train()
+    optimizer.zero_grad()
 
+    avg_loss = 0
     for batch_idx in range(num_batches):
         start_idx = batch_idx * batch_size
         end_idx = min(start_idx + batch_size, len(train_cache))
@@ -120,13 +126,21 @@ def _train_epoch(model: nn.Module,
 
         # Forward pass
         outputs = model(batch_images)
-        loss = criterion(outputs, batch_labels)
-        optimizer.zero_grad()
+        loss = criterion(outputs, batch_labels) / accumulation_steps
         # Backward pass
         loss.backward()
-        optimizer.step()
 
-    return loss.item()
+        # Perform the weight update only after reaching the target step (`accumulation_steps`)
+        if (batch_idx + 1) % accumulation_steps == 0:
+            optimizer.step()
+            optimizer.zero_grad()
+
+            last_loss = avg_loss
+            avg_loss = 0
+
+        avg_loss += loss.item()
+
+    return last_loss
 
 def save_model_weights(model: nn.Module | optim.Optimizer, weights_file: str) -> None:
     """
@@ -170,7 +184,8 @@ def train_model(model: nn.Module,
                 train_cache: ImageCache,
                 test_cache: ImageCache,
                 val_cache: ImageCache,
-                log_file: str,
+                accuracy_log_file: str | None = None,
+                loss_log_file: str | None = None,
                 image_transform_filter: v2.Compose | None = None,
                 start_epoch = 1,
                 ):
@@ -189,14 +204,25 @@ def train_model(model: nn.Module,
 
     # Training loop
     for epoch in range(start_epoch, epochs + 1):
-        if SLEEP_INTERVAL:
-            time.sleep(SLEEP_INTERVAL)
+        start_clk = time.time()
         loss = _train_epoch(model, train_cache, optimizer, criterion, image_transform_filter)
-        print(f"loss = {loss:.6f}")
+        end_clk = time.time()
+        print(f"loss = {loss:.6f} ; {(end_clk - start_clk):.3f}s")
 
         # Evaluate and log every several epochs
         if epoch % LOGGING_INTERVAL == 0 or epoch == TRAINING_DEVICE or epoch == 1:
-            evaluate_loss_and_log(model, train_cache, test_cache, val_cache, BATCH_SIZE, TRAINING_DEVICE, epoch, log_file)
+            evaluate_and_log(model,
+                             train_cache,
+                             test_cache,
+                             val_cache,
+                             PARALLEL_BATCH_SIZE,
+                             TRAINING_DEVICE,
+                             epoch,
+                             loss_log_file=loss_log_file,
+                             accuracy_log_file=accuracy_log_file)
+
+        if SLEEP_INTERVAL:
+            time.sleep(SLEEP_INTERVAL)
 
 def main():
     """Main function to run the model training."""
@@ -281,19 +307,19 @@ def main():
             weights_file = os.path.join(weights_dir, f'model-{i}.pt')
             optimizer_file = os.path.join(weights_dir, f'model-{i}-optimizer.pt')
             accuracy_log_file = os.path.join(log_dir, f'model-{i}-accuracy.txt')
-            log_file = os.path.join(log_dir, f'train-{i}.csv')
+            loss_log_file = os.path.join(log_dir, f'train-{i}.csv')
 
             # Create a new model instance
             model = ModelClass().to(TRAINING_DEVICE)
             optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
             
-            if os.path.exists(weights_file) and os.path.exists(optimizer_file) and os.path.exists(log_file):
+            if os.path.exists(weights_file) and os.path.exists(optimizer_file) and os.path.exists(loss_log_file):
                 load_model_weights(model, weights_file)
                 load_model_weights(optimizer, optimizer_file)
-                last_epoch_index = load_last_epoch_index(log_file)
+                last_epoch_index = load_last_epoch_index(loss_log_file)
             else:
                 # Create log file
-                _create_log_file(log_file)
+                _create_log_file(loss_log_file)
                 last_epoch_index = 0
 
             # Train this instance
@@ -301,15 +327,15 @@ def main():
                 model, optimizer,
                 TRAINING_EPOCHS,
                 train_cache, test_cache, val_cache,
-                log_file,
                 image_transform_filter=image_transform_filter,
                 start_epoch = last_epoch_index + 1,
+                loss_log_file=loss_log_file,
+                accuracy_log_file=accuracy_log_file
             )
 
             # Save the model
             save_model_weights(model, weights_file)
             save_model_weights(optimizer, optimizer_file)
-            evaluate_accuracy_and_log(model, train_cache, test_cache, val_cache, BATCH_SIZE, TRAINING_DEVICE, accuracy_log_file)
 
             print(f"Completed training for model instance {i}/{AMOUNT_OF_MODELS}\n")
 

@@ -24,9 +24,9 @@ from numbers import Number
 from typing import Iterable
 
 # Color constants for terminal output
-RED = "\033[31m"
-YELLOW = "\033[33m"
-RESET = "\033[0m"
+RED_COLOR_ESC = "\033[31m"
+YELLOW_COLOR_ESC = "\033[33m"
+RESET_COLOR_ESC = "\033[0m"
 
 # ----------------------------------------------------------------------
 # Configuration constants
@@ -88,7 +88,7 @@ POINT_COORDINATES_LABEL_Y_OFFSET = 4
 POINT_COORDINATES_LABEL_Y_INDEX_OFFSET = 20
 
 # SVG overall layout
-SVG_BACKGROUND = "black"
+SVG_BACKGROUND = None
 SVG_HEADER_STR = f'<svg width="{CANVAS_WIDTH}" height="{CANVAS_HEIGHT}" xmlns="http://www.w3.org/2000/svg" version="1.1">'
 SVG_TAIL_STR = "</svg>"
 
@@ -168,14 +168,14 @@ def read_single_csv(filepath: str) -> \
     for row_num, row in enumerate(rows, start=1):
         # Skip empty/malformed lines
         if (not row or all(cell.strip() == '' for cell in row)) or len(row) < len(header):
-            print(f"{YELLOW}Warning: line {row_num} has fewer columns than header - skipping.{RESET}")
+            print(f"{YELLOW_COLOR_ESC}Warning: line {row_num} has fewer columns than header - skipping.{RESET_COLOR_ESC}")
             continue
 
         # Parse x value (first column)
         try:
             x = int(row[0])
         except ValueError:
-            print(f"{YELLOW}Warning: cannot parse X value on line {row_num} - skipping.{RESET}")
+            print(f"{YELLOW_COLOR_ESC}Warning: cannot parse X value on line {row_num} - skipping.{RESET_COLOR_ESC}")
             continue
         x_values.append(x)
 
@@ -184,7 +184,7 @@ def read_single_csv(filepath: str) -> \
             try:
                 val = float(row[col_idx])
             except (ValueError, IndexError):
-                print(f"{YELLOW}Warning: bad numeric value for {y_field} on line {row_num} - skipping this row.{RESET}")
+                print(f"{YELLOW_COLOR_ESC}Warning: bad numeric value for {y_field} on line {row_num} - skipping this row.{RESET_COLOR_ESC}")
                 # Abort this row entirely – we don't have complete data for it
                 break
             # For single file, we use file_index = 0
@@ -625,9 +625,12 @@ def main():
 
     # Process each directory containing CSV files
     for dir_path in sorted(dirs_to_process):
-        print(f"Processing directory: {dir_path}")
-        plot_to_svg(dir_path)
-        print("--- SVG images were created")
+        try:
+            print(f"Processing directory: {dir_path}")
+            plot_to_svg(dir_path)
+            print("--- SVG images were created")
+        except Exception as e:
+            print(f'''{RED_COLOR_ESC}Can't process files in "{dir_path}"\n --- Error: {e}!{RESET_COLOR_ESC}''')
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,7 @@
 
 ## Introduction
 I took image database from HuggingFace (https://huggingface.co/datasets/yashikota/birds-525-species-image-classification),
-and I made a task to create model that classify the images on the database.
+and I made a task to create model that classify the images on the database.  
 The database as follow:
  - Train-images: 84635
  - Test-images: 2625
@@ -31,8 +31,8 @@ Also there is a script that takes the data and build a SVG image from it for eas
 
 
 ## Before training
-* I made database-viewer application to see the database.
-* I made a class that hold the database, and convert it to NumPy format (you can look on the database format at its source `https://huggingface.co/datasets/yashikota/birds-525-species-image-classification`, here the database is in .gitignore).
+* I made the database-viewer application to see the database.
+* I made a class that hold the database, and convert it to NumPy format (you can look on the database format at its source [https://huggingface.co/datasets/yashikota/birds-525-species-image-classification](https://huggingface.co/datasets/yashikota/birds-525-species-image-classification), here the database is in .gitignore).
 * I applied a cache for the images that holds them pre-convert from image representation to PyTorch Tensors, ready for easy access during training.
 
 </br>
@@ -183,7 +183,7 @@ The best results I could get with this model were:
     - val-accuracy:   76.761902%
 
 > [!NOTE]
-> Look the over fitting problem is gone - the test & validation scores is close to the train score.
+> Look the over fitting problem is gone - the test & validation scores are close to the train score.
 
 > [!WARNING]
 > The mode can't detect complex patterns - it is too small!
@@ -218,3 +218,9 @@ As I saw that more parameters means better learning with *AlexNet-like-5*, I tri
 ---
 
 **AlexNet-like-5 gave me good enough results, I'm happy with them, and I stop here**
+
+## VGGNet-16-like
+After hearing a recommendation to use VGGNet-16 architecture in this project, I indeed intended to try it out, and this is how the *VGGNet-16-like* network born, a `18M` parameters network.  
+There is a change from VGGNet-16 architecture at the last Linear Layers' size: 4096 -> 1536, a strong reduction in channel count at the convolution layers, and no padding on two last convolution layer.  
+
+**Result will be added soon!**
