@@ -6,11 +6,10 @@ This program:
 - Imports the class from the model
 - Loads the bird database using @src/database_reader/ package
 - Creates cached image tensors for efficient training
-- In a loop of i in [1, ..., 10]:
+- In a loop of i in [1, ...]:
   + Creates instance of the model
   + Trains it with ADAM optimizer and cross-entropy loss
-  + Does 300 training loops
-  + After every 30 training loops, evaluates loss with 'train', 'test' and 'validation' databases
+  + After every several training loops, evaluates loss with 'train', 'test' and 'validation' databases
   + Plots the loss CSV file in a subdirectory 'log/train-i.csv' (under the model file)
   + Saves the model weights at "weights/model-i.pt"
 """
@@ -37,12 +36,12 @@ TRAINING_DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.d
 CACHE_DEVICE = torch.device("cpu")
 BATCH_SIZE = 1536
 PARALLEL_BATCH_SIZE = 192
-TRAINING_EPOCHS = 30
+TRAINING_EPOCHS = 230
 LOGGING_INTERVAL = 10
 AMOUNT_OF_MODELS = 1
 LEARNING_RATE = 0.001
 
-SLEEP_INTERVAL = 10
+SLEEP_INTERVAL = 15
 
 assert PARALLEL_BATCH_SIZE < BATCH_SIZE and BATCH_SIZE % PARALLEL_BATCH_SIZE == 0, "Can't run check: BATCH_SIZE & PARALLEL_BATCH_SIZE"
 

@@ -504,8 +504,7 @@ def write_svg(filepath: str, svg_parts: list[str]) -> None:
         print(f"Failed to write SVG file: {e}")
         sys.exit(1)
 
-def create_svg_with_average(filenames: tuple[str],
-                            x_values: tuple[int],
+def create_svg_with_average(x_values: tuple[int],
                             series_data: dict[str, tuple[dict[int, float]]],
                             averaged_data: dict[str, dict[int, float]],
                             output_filename: str) -> None:
@@ -555,6 +554,7 @@ def create_svg_with_average(filenames: tuple[str],
     label_x = PADDING_LEFT + LABEL_OFFSET_FROM_RIGHT
 
     # Process each y-field
+    
     for y_field, y_series_data in series_data.items():
         if y_field not in GRAPH_NAME_MAP:
             continue
@@ -592,7 +592,7 @@ def plot_to_svg(csv_dir_filepath: str) -> None:
 
     # Create SVGs with both individual and average series
     csv_filename = os.path.join(csv_dir_filepath, 'graph.svg')
-    create_svg_with_average(filenames, x_values, series_data, averaged_data, csv_filename)
+    create_svg_with_average(x_values, series_data, averaged_data, csv_filename)
 
 # ----------------------------------------------------------------------
 # Main routine

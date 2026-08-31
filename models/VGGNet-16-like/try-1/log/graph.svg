@@ -56,28 +56,7 @@
   <circle cx="740.75" cy="693.39" r="3" fill="#0000ff"/>
   <text x="710.7547169811321" y="717.3863163315741" font-family="sans-serif" font-size="12" fill="#0000ff">(50, 1.191)</text>
   <polyline points="99.25,98.68 217.07,332.42 347.99,512.86 478.91,610.34 609.83,667.41 740.75,693.39" fill="none" stroke="#0000ff" stroke-width="2"/>
-  <text x="90" y="50" font-family="sans-serif" font-size="16" fill="#00ff00">test</text>
-  <circle cx="99.25" cy="98.86" r="2" fill="#00ff0077"/>
-  <circle cx="217.07" cy="350.51" r="2" fill="#00ff0077"/>
-  <circle cx="347.99" cy="533.76" r="2" fill="#00ff0077"/>
-  <circle cx="478.91" cy="635.51" r="2" fill="#00ff0077"/>
-  <circle cx="609.83" cy="692.58" r="2" fill="#00ff0077"/>
-  <circle cx="740.75" cy="721.32" r="2" fill="#00ff0077"/>
-  <polyline points="99.25,98.86 217.07,350.51 347.99,533.76 478.91,635.51 609.83,692.58 740.75,721.32" fill="none" stroke="#00ff0077" stroke-width="1"/>
-  <circle cx="99.25" cy="98.86" r="3" fill="#00ff00"/>
-  <text x="69.24528301886792" y="82.85776479717504" font-family="sans-serif" font-size="12" fill="#00ff00">(1, 6.266)</text>
-  <circle cx="217.07" cy="350.51" r="3" fill="#00ff00"/>
-  <text x="187.07354639969196" y="374.5115932241543" font-family="sans-serif" font-size="12" fill="#00ff00">(10, 4.118)</text>
-  <circle cx="347.99" cy="533.76" r="3" fill="#00ff00"/>
-  <text x="317.99383904505197" y="517.7550804556945" font-family="sans-serif" font-size="12" fill="#00ff00">(20, 2.553)</text>
-  <circle cx="478.91" cy="635.51" r="3" fill="#00ff00"/>
-  <text x="448.914131690412" y="659.5085093325591" font-family="sans-serif" font-size="12" fill="#00ff00">(30, 1.685)</text>
-  <circle cx="609.83" cy="692.58" r="3" fill="#00ff00"/>
-  <text x="579.834424335772" y="676.5767701620641" font-family="sans-serif" font-size="12" fill="#00ff00">(40, 1.197)</text>
-  <circle cx="740.75" cy="721.32" r="3" fill="#00ff00"/>
-  <text x="710.7547169811321" y="745.3207547169811" font-family="sans-serif" font-size="12" fill="#00ff00">(50, 0.952)</text>
-  <polyline points="99.25,98.86 217.07,350.51 347.99,533.76 478.91,635.51 609.83,692.58 740.75,721.32" fill="none" stroke="#00ff00" stroke-width="2"/>
-  <text x="90" y="70" font-family="sans-serif" font-size="16" fill="#ff0000">train</text>
+  <text x="90" y="50" font-family="sans-serif" font-size="16" fill="#ff0000">train</text>
   <circle cx="99.25" cy="99.77" r="2" fill="#ff000077"/>
   <circle cx="217.07" cy="323.59" r="2" fill="#ff000077"/>
   <circle cx="347.99" cy="497.94" r="2" fill="#ff000077"/>
@@ -98,4 +77,25 @@
   <circle cx="740.75" cy="716.51" r="3" fill="#ff0000"/>
   <text x="710.7547169811321" y="740.5083418560381" font-family="sans-serif" font-size="12" fill="#ff0000">(50, 0.993)</text>
   <polyline points="99.25,99.77 217.07,323.59 347.99,497.94 478.91,608.26 609.83,677.80 740.75,716.51" fill="none" stroke="#ff0000" stroke-width="2"/>
+  <text x="90" y="70" font-family="sans-serif" font-size="16" fill="#00ff00">test</text>
+  <circle cx="99.25" cy="98.86" r="2" fill="#00ff0077"/>
+  <circle cx="217.07" cy="350.51" r="2" fill="#00ff0077"/>
+  <circle cx="347.99" cy="533.76" r="2" fill="#00ff0077"/>
+  <circle cx="478.91" cy="635.51" r="2" fill="#00ff0077"/>
+  <circle cx="609.83" cy="692.58" r="2" fill="#00ff0077"/>
+  <circle cx="740.75" cy="721.32" r="2" fill="#00ff0077"/>
+  <polyline points="99.25,98.86 217.07,350.51 347.99,533.76 478.91,635.51 609.83,692.58 740.75,721.32" fill="none" stroke="#00ff0077" stroke-width="1"/>
+  <circle cx="99.25" cy="98.86" r="3" fill="#00ff00"/>
+  <text x="69.24528301886792" y="82.85776479717504" font-family="sans-serif" font-size="12" fill="#00ff00">(1, 6.266)</text>
+  <circle cx="217.07" cy="350.51" r="3" fill="#00ff00"/>
+  <text x="187.07354639969196" y="374.5115932241543" font-family="sans-serif" font-size="12" fill="#00ff00">(10, 4.118)</text>
+  <circle cx="347.99" cy="533.76" r="3" fill="#00ff00"/>
+  <text x="317.99383904505197" y="517.7550804556945" font-family="sans-serif" font-size="12" fill="#00ff00">(20, 2.553)</text>
+  <circle cx="478.91" cy="635.51" r="3" fill="#00ff00"/>
+  <text x="448.914131690412" y="659.5085093325591" font-family="sans-serif" font-size="12" fill="#00ff00">(30, 1.685)</text>
+  <circle cx="609.83" cy="692.58" r="3" fill="#00ff00"/>
+  <text x="579.834424335772" y="676.5767701620641" font-family="sans-serif" font-size="12" fill="#00ff00">(40, 1.197)</text>
+  <circle cx="740.75" cy="721.32" r="3" fill="#00ff00"/>
+  <text x="710.7547169811321" y="745.3207547169811" font-family="sans-serif" font-size="12" fill="#00ff00">(50, 0.952)</text>
+  <polyline points="99.25,98.86 217.07,350.51 347.99,533.76 478.91,635.51 609.83,692.58 740.75,721.32" fill="none" stroke="#00ff00" stroke-width="2"/>
 </svg>
