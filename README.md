@@ -1,48 +1,49 @@
 # Train A Neural Network On Bird Database For Image Classification
 
+
 ## Introduction
-I took image database from HuggingFace (https://huggingface.co/datasets/yashikota/birds-525-species-image-classification),
-and I made a task to create model that classify the images on the database.  
-The database as follow:
- - Train-images: 84635
- - Test-images: 2625
- - Validation-images: 2625
- - Image-Size: 224x224
- - Classes: 525 (+1 for images without birds)
+I obtained the image database from HuggingFace [https://huggingface.co/datasets/yashikota/birds-525-species-image-classification](https://huggingface.co/datasets/yashikota/birds-525-species-image-classification) and set out to create a model that classifies the images in this dataset.  
+The dataset consists of:
+
+- **Train images:** 84,635
+- **Test images:** 2,625
+- **Validation images:** 2,625
+- **Image size:** 224 × 224
+- **Classes:** 525 (+1 class for images without birds)
 
 *Examples from the database:*  
 <img src="README_files/database-examples/train-99.jpg"/>
 <img src="README_files/database-examples/train-186.jpg"/>
 <img src="README_files/database-examples/train-427.jpg"/>
 
+
 ## What's in this project?
-1. This project contains the workflow I took, to get the best model I could, it details my tries, failures and successes.
-At the end the best model is represented to show how it perform.
+1. This project documents the workflow I followed to obtain the best model possible, detailing my attempts, failures, and successes. At the end, the best model is presented to demonstrate its performance.  
 
-2. For each model there is a log file along with the model, representing how it perform, and the training epochs' scores.
-Also there is a script that takes the data and build a SVG image from it for easier representation.
+2. For each model, there is a log file alongside the model that records its performance and the scores for each training epoch. Additionally, a script converts these logs into an SVG image for easier visualization.
 
-3. There is a database viewer that can be configured to show the training/test/validation images with/without image transforms.
+3. A database viewer is included that can be configured to display training, test, or validation images with or without applied image transforms.
 
-4. Testing scripts; *note - not all the code is tested, this project is more focused on AI than coding*
+4. Testing scripts are provided; *note*: not all code is tested, as this project focuses more on AI development than on software engineering practices.
 
 > [!NOTE]
-> Not every model architecture and every training is presented here, only the core points of the research are kept!
+> Only the core points of the research are retained here; not every model architecture or training run is shown.
 
 
 ## Before training
-* I made the database-viewer application to see the database.
-* I made a class that hold the database, and convert it to NumPy format (you can look on the database format at its source [https://huggingface.co/datasets/yashikota/birds-525-species-image-classification](https://huggingface.co/datasets/yashikota/birds-525-species-image-classification), here the database is in .gitignore).
-* I applied a cache for the images that holds them pre-convert from image representation to PyTorch Tensors, ready for easy access during training.
+* I built a database-viewer application to inspect the database.
+* I created a class that loads the database and converts it to NumPy format. (see the original source at: [https://huggingface.co/datasets/yashikota/birds-525-species-image-classification](https://huggingface.co/datasets/yashikota/birds-525-species-image-classification); the database itself is listed in `.gitignore`).
+* I implemented a cache that stores images as pre‑converted PyTorch tensors, enabling fast access during training.
 
 </br>
 
 # Model Training
 
 ## CNN-1
-The model is a simple CNN architecture, small with `114K` parameters.  
-Input size: 94x94
-After several tries the best results I could get with this model were:
+This model is a simple CNN with a small, **114K** parameters.  
+**Input size:** 94x94  
+
+After several experiments, the best results I obtained were:
 - Loss:
     - train-loss: 2.098122
     - test-loss:  1.869292
@@ -54,13 +55,13 @@ After several tries the best results I could get with this model were:
 
 <img width="400px" src="models/CNN-1/try-2/log/graph.svg">
 
-> [!WARNING]
-> The model is too small for learning complex pattern!
+> [!TIP]
+> The model is too small to learn complex patterns.
 
 ## CNN-2
-The model is a simple CNN architecture, small with `137K` parameters.  
-Input size: 224x224
-The best results:
+This model is also a simple CNN, slightly larger with **137K** parameters.  
+**Input size:** 224x224  
+Best results:
 - Loss:
     - train-loss: 1.790865
     - test-loss:  1.669988
@@ -72,20 +73,16 @@ The best results:
 
 <img width="400px" src="models/CNN-2/log/graph.svg">
 
-> [!WARNING]
-> The model better from the previous one, but still it's too small for learning complex pattern!
-
-This models has almost the same parameter count as the previous one, though it out perform it,
-we can take into conclusion the bigger image size, that probably responsible for that.
-
 > [!NOTE]
-> The full image size improve performance.
+> Although this model performs better than CNN‑1, it is still too small to capture complex patterns.
+
+> [!IMPORTANT]
+> The increase in input size (from 94x94 to 224x224) likely accounts for the improvement.
 
 ## AlexNet-like-1
-The model is a AlexNet architecture, with `12M` parameters.  
-There is a change from AlexNet architecture at the last Linear Layers' size: 4096 -> 1024  
-Input size: 224x224
-The best results:
+This model follows the AlexNet architecture with **12M** parameters, modifying the final linear layers from 4096 to 1024 units.  
+Input size: 224x224  
+Best results:
 - Loss:
     - train-loss: 0.473686
     - test-loss:  0.98839
@@ -98,14 +95,12 @@ The best results:
 <img width="400px" src="models/AlexNet-like-1/try-3/log/graph.svg">
 
 > [!WARNING]
-> The results are from epoch training 30, more than that the model start to over-fit the training data
+> These results come from epoch 30; training longer leads to over‑fitting on the training data.
 
 ## AlexNet-like-2
-The model is a AlexNet architecture, with `10M` parameters.  
-There is a change from AlexNet architecture at the last Linear Layers' size: 4096 -> 1024,
-and a reduction in channel count at the convolution layers.  
-Input size: 224x224
-The best results I could get with this model were:
+This AlexNet variant has **10M** parameters, with the same linear‑layer change (4096 -> 1024) and a reduced channel count in the convolutional layers.  
+Input size: 224x224  
+Best results:
 - Loss:
     - train-loss: 0.094126
     - test-loss:  0.823275
@@ -117,15 +112,14 @@ The best results I could get with this model were:
 
 <img width="400px" src="models/AlexNet-like-2/log/graph.svg">
 
-> [!WARNING]
-> More room for training, but still there is some over-fitting issue
+> [!NOTE]
+> More room for training, but over-fitting remains an issue.
 
 ## AlexNet-like-3
-The model is a AlexNet architecture, with `3M` parameters.  
-There is a change from AlexNet architecture at the last Linear Layers' size: 4096 -> 512,
-and a strong reduction in channel count at the convolution layers.  
-Input size: 224x224
-The best results I could get with this model were:
+This model is a further reduced AlexNet with **3M** parameters, changing the final linear layers to 512 units and strongly reducing convolutional channels.  
+Input size: 224x224  
+Best results:
+
 - Loss:
     - train-loss: 0.124912
     - test-loss:  1.20639
@@ -137,42 +131,44 @@ The best results I could get with this model were:
 
 <img width="400px" src="models/AlexNet-like-3/try-2/log/graph.svg">
 
-> [!WARNING]
-> The smaller model straggle at the test & evaluation images too, in fact as I make the model smaller it straggle more.
-> The solution to the over-fitting must be something else, smaller AlexNet-like model will not solve the issue!
+> [!IMPORTANT]
+> As the model shrinks, it struggles more on test and validation images. Simply making the AlexNet‑like model smaller does not solve the over‑fitting problem; a different approach is needed.  
+
 
 ---
 
-Here I though that maybe AlexNet architecture is too old. I try other architecture which try to mix AlexNet with VGGNet ideas (use multiple convolution of 3 instead of 5,7,11).  
-The (**CNN-3**, `7M` parameters) apply this idea, I tried different sizes of the network, at the end the best I could reach is not better than the AlexNet architecture and I aborted this idea.  
-I didn't try the **VGG** architecture as it is 138M-144M parameters in size, which of course will cause over fitting.
+At this point I suspected that the classic AlexNet architecture might be outdated for this task, so I experimented with hybrids that blend AlexNet and VGG ideas (using stacked 3x3 convolutions instead of larger kernels). The resulting **CNN‑3** (7M parameters) did not surpass the AlexNet variants, so I abandoned that direction.  
 
-I also tried another network (**AlexNet-like-4**, `7M` parameters), which also doesn't give me the results I'm looking for.  
+Another attempt, **AlexNet‑like‑4** (7M parameters), likewise failed to deliver the desired performance.
 
 ---
+
+</br>
 
 # Image Transforms - Adding Data Variance
 
-I tried to train multiple models, with different sizes, learning-rate, batch-size and epochs.
-I got either small-model which don't recognize complex patterns (perform bad on the images), or large models which are over fitted to the training set (and perform bad on the test & evaluation sets).  
-I decided to expand the training data variance with `torchvision.transforms.v2`, and than train a model.
+I trained many models with varying sizes, learning rates, batch sizes, and epoch counts. The outcomes fell into two categories:
 
-Each image is randomly changed by:
-- crop of the image (at least 80% of the images is saved).
-- 0-2 box erased from the image (a box is 1%-5% of the image).
-- flip
-- color jitter
+* **Small models** - unable to capture complex patterns, yielding poor accuracy on all sets.
+* **Large models** - over‑fit to the training set, resulting in low test/validation scores.
 
-*Examples from the database:*  
+To address this, I increased the variance of the training data using `torchvision.transforms.v2`, each image is randomly altered by:
+* Random crop (retaining at least 80% of the original image).
+* Erasing 0‑2 boxes (each box covers 1%-5% of the image area).
+* Horizontal flip.
+* Color jitter.
+
+*Examples from the database, after transformation:*  
 <img src="README_files/image-transforms/train-99.jpg"/>
 <img src="README_files/image-transforms/train-186.jpg"/>
 <img src="README_files/image-transforms/train-427.jpg"/>
 
 
-## Train old networks again
-First I start training the old networks again, seeing how the would they perform under the new changes
+## Train the old networks again
+I trained the previously examined architectures with the new altered images to see how they would behave.
+
 ### AlexNet-like-3
-The best results I could get with this model were:
+Best results with augmentations:
 - Loss:
     - train-loss: 0.916084
     - test-loss:  0.816708
@@ -183,23 +179,18 @@ The best results I could get with this model were:
     - val-accuracy:   76.761902%
 
 > [!NOTE]
-> Look the over fitting problem is gone - the test & validation scores are close to the train score.
+> The gap between training and validation/test scores has narrowed.
 
-> [!WARNING]
-> The mode can't detect complex patterns - it is too small!
+> [!TIP]
+> However, the model remains too small to learn sufficiently complex patterns.
 
----
+*I also trained the **AlexNet-like‑4** and **AlexNet-like‑1** with, but neither yielded satisfactory results (their logs are not present in the repository).*
 
-I also tried the AlexNet-like-4 again, with no success.  
-And also try the AlexNet-like-1 again, with no success either *(files are not in the repo)*
-
----
 
 ## AlexNet-like-5
-**I saw that the previous models are too small from getting the full complexity of the new training set they get, therefore I tried to make a larger model, to see how will it perform.**
-I made a bigger model with `17M` parameters.  
-There is a change from AlexNet architecture at the last Linear Layers' size: 4096 -> 1536  
-The results:
+Seeing that the earlier models were too small for the enriched training set, I scaled up the network to **17M** parameters, adjusting the final linear layer from 4096 -> 1536 units.  
+Input size: 224x224  
+Results:  
 - Loss:
     - train-loss: 0.070933
     - test-loss:  0.439326
@@ -213,14 +204,17 @@ The results:
 
 ---
 
-As I saw that more parameters means better learning with *AlexNet-like-5*, I tried to go even farther with *AlexNet-like-6* which has `22M` parameters. Though I couldn't see any improvement there.
+Encouraged by the improvement, I tried an even larger variant, **AlexNet‑like‑6** (22M parameters), but observed no further gain.  
+
+Given that AlexNet‑like‑5 already provides strong generalization, I decided to stop the search after AlexNet like architecture here.
 
 ---
 
-**AlexNet-like-5 gave me good enough results, I'm happy with them, and I stop here**
-
 ## VGGNet-16-like
-After hearing a recommendation to use VGGNet-16 architecture in this project, I indeed intended to try it out, and this is how the *VGGNet-16-like* network born, a `18M` parameters network.  
-There is a change from VGGNet-16 architecture at the last Linear Layers' size: 4096 -> 1536, a strong reduction in channel count at the convolution layers, and no padding on two last convolution layer.  
+After hearing a recommendation to try a VGG‑style network, I constructed the **VGGNet-16-like** a model with roughly **18M** parameters. Modifications include:
+* Changing the final linear layer from 4096 → 1536 units.
+* Significantly reducing the number of channels in the convolutional layers.
+* Removing padding from the last two convolutional layers.
+Input size: 224x224  
 
-**Result will be added soon!**
+**Results will be added soon!**
