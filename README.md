@@ -217,4 +217,14 @@ After hearing a recommendation to try a VGG‑style network, I constructed the *
 * Removing padding from the last two convolutional layers.
 Input size: 224x224  
 
-**Results will be added soon!**
+Best results:  
+- Loss:
+    - train-loss: 0.105549
+    - test-loss:  0.331891
+    - val-loss:   0.615437
+- Accuracy:
+    - train-accuracy: 97.950020%
+    - test-accuracy:  91.542854%
+    - val-accuracy:   88.457146%
+
+<img width="400px" src="models/VGGNet-16-like/try-2/log/graph.svg">
