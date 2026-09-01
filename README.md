@@ -202,6 +202,8 @@ Results:
 
 <img width="400px" src="models/AlexNet-like-5/try-1/log/graph.svg">
 
+**The trained model for this network is excluded from *.gitignore*, find it in at [AlexNet-like-5/try-1/weights/model-1.pt](models/AlexNet-like-5/try-1/weights/model-1.pt)**
+
 ---
 
 Encouraged by the improvement, I tried an even larger variant, **AlexNet‑like‑6** (22M parameters), but observed no further gain.  
@@ -228,3 +230,5 @@ Best results:
     - val-accuracy:   88.457146%
 
 <img width="400px" src="models/VGGNet-16-like/try-2/log/graph.svg">
+
+**The trained model for this network is excluded from *.gitignore*, find it in at [VGGNet-16-like/try-2/weights/model-1.pt](models/VGGNet-16-like/try-2/weights/model-1.pt)**

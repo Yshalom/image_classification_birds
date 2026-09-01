@@ -3,3 +3,7 @@ __pycache__/
 venv/
 database/
 *.pt
+
+# Add models
+!models/AlexNet-like-5/try-1/weights/model-1.pt
+!models/VGGNet-16-like/try-2/weights/model-1.pt
